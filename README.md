@@ -14,13 +14,23 @@ Automação em TypeScript/Node para ler um sitemap WordPress, enriquecer metadad
 
 ## Uso Local
 
+Para processar o sitemap completo:
+
 ```bash
 pnpm install
-pnpm generate --sitemap https://blog.jota.ai/post-sitemap.xml --out public --base-url http://localhost:8080 --limit 10
+pnpm generate --sitemap https://blog.jota.ai/post-sitemap.xml --out public --base-url http://localhost:8080
 pnpm serve --dir public --port 8080
 ```
 
-Acesse `http://localhost:8080`. Para processar o sitemap inteiro, remova `--limit`.
+Acesse `http://localhost:8080`.
+
+Para validação rápida, use `--limit`:
+
+```bash
+pnpm generate --sitemap https://blog.jota.ai/post-sitemap.xml --out public --base-url http://localhost:8080 --limit 10
+```
+
+Sem `--limit`, todas as URLs válidas do sitemap são processadas. Com `--limit`, o relatório e o índice indicam que a saída é uma amostra de validação.
 
 ## Docker
 
@@ -35,6 +45,7 @@ SITEMAP_URL=https://blog.jota.ai/post-sitemap.xml
 PUBLIC_BASE_URL=http://localhost:8080
 LIMIT=10
 CONCURRENCY=6
+NETWORK_TIMEOUT_MS=30000
 PORT=8080
 ```
 
@@ -58,7 +69,7 @@ docker compose config
 - `public/index.html`: índice local.
 - `public/sitemap.xml`: sitemap das stories.
 - `public/robots.txt`: referência ao sitemap das stories.
-- `public/reports/report.json`: resumo de lote, sucessos, warnings e falhas.
+- `public/reports/report.json`: URLs lidas, URLs processadas, limite aplicado, sucessos, warnings e falhas.
 - `public/reports/failures.csv`: falhas por URL.
 
 ## Documentação Técnica
@@ -67,10 +78,7 @@ docker compose config
 - `docs/architecture.md`: desenho da vertical slice.
 - `docs/testing-strategy.md`: estratégia de testes por comportamento.
 - `docs/web-stories-rules.md`: regras Google/AMP e matriz de cenários.
-- `AGENTS.md`: regras locais para manutenção por agentes.
 
 ## Transparência Sobre Uso De IA
 
-IA foi usada como apoio de produtividade em planejamento, revisão, documentação e validação de qualidade. A geração das Web Stories em runtime é determinística: o CLI não chama LLM, não depende de prompt e não envia conteúdo para modelos externos.
-
-Os artefatos relacionados a agentes ficam em `AGENTS.md` e `.impeccable.md`. A responsabilidade da entrega é verificada pelos gates objetivos em `pnpm check`, `pnpm generate`, `pnpm validate:amp` e `docker compose config`.
+IA foi usada como apoio de produtividade em planejamento, revisão e documentação. A geração das Web Stories em runtime é determinística: o CLI não chama LLM, não depende de prompt e não envia conteúdo do sitemap para modelos externos.

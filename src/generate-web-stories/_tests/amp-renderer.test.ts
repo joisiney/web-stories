@@ -89,4 +89,32 @@ describe('renderAmpStoryHtml', () => {
     expect(css).not.toMatch(/@keyframes[\s\S]*\b(width|height|padding|margin|top|left|right|bottom)\b/);
     expect(css).not.toContain('!important');
   });
+
+  it('inclui CSS defensivo para títulos e textos longos', () => {
+    const html = renderAmpStoryHtml({
+      slug: 'post-longo',
+      sourceUrl: 'https://blog.example.com/post-longo/',
+      canonicalUrl: 'https://stories.example.com/stories/post-longo/',
+      title: 'Superpalavraeditorialsemquebranaturalparaavaliarrobustezvisual',
+      description: 'Resumo curto do post longo.',
+      publisher: 'Example',
+      logoSrc: 'https://stories.example.com/assets/logo.png',
+      posterPortraitSrc: 'https://stories.example.com/assets/poster.jpg',
+      heroImageSrc: 'https://cdn.example.com/longo.webp',
+      variant: 'image-summary',
+      pages: [{
+        id: 'cover',
+        heading: 'Superpalavraeditorialsemquebranaturalparaavaliarrobustezvisual',
+        text: 'Texto com outra palavraextremamentelongaqueprecisaquebrardentrodocontainer.',
+        motion: 'cover',
+        media: { kind: 'image', src: 'https://cdn.example.com/longo.webp' }
+      }]
+    });
+    const css = html.match(/<style amp-custom>(?<css>.*?)<\/style>/s)?.groups?.css ?? '';
+
+    expect(css).toContain('overflow-wrap:anywhere');
+    expect(css).toContain('word-break:break-word');
+    expect(css).toContain('max-width:100%');
+    expect(html).toContain('Superpalavraeditorialsemquebranaturalparaavaliarrobustezvisual');
+  });
 });

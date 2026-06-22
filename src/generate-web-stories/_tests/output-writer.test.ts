@@ -18,6 +18,10 @@ describe('writeGenerationOutput', () => {
     await writeGenerationOutput({
       outputDir,
       publicBaseUrl: 'https://stories.example.com',
+      sitemapUrls: 3,
+      processed: 2,
+      limit: 2,
+      limitApplied: true,
       stories: [
         {
           sourceUrl: 'https://blog.example.com/ok/',
@@ -25,7 +29,7 @@ describe('writeGenerationOutput', () => {
           outputPath: join(outputDir, 'stories', 'ok', 'index.html'),
           title: 'Post OK',
           variant: 'image-summary',
-          warnings: []
+          warnings: [{ code: 'unsupported-video', message: 'Vídeo ignorado porque não é direto.' }]
         }
       ],
       failures: [{ url: 'https://blog.example.com/falha/', reason: 'Missing featured image for source URL' }],
@@ -34,10 +38,23 @@ describe('writeGenerationOutput', () => {
       durationMs: 1000
     });
 
-    expect(await readFile(join(outputDir, 'index.html'), 'utf8')).toContain('1 story(s) gerada(s), 1 falha(s).');
+    const indexHtml = await readFile(join(outputDir, 'index.html'), 'utf8');
+    expect(indexHtml).toContain('Amostra de validação');
+    expect(indexHtml).toContain('2 processadas de 3 URLs lidas');
+    expect(indexHtml).toContain('1 sucesso');
+    expect(indexHtml).toContain('1 falha');
+    expect(indexHtml).toContain('unsupported-video');
+    expect(indexHtml).toContain('Missing featured image for source URL');
+    expect(indexHtml).toContain('href="/sitemap.xml"');
+    expect(indexHtml).toContain('href="/robots.txt"');
+    expect(indexHtml).toContain('href="/reports/report.json"');
+    expect(indexHtml).toContain('href="/reports/failures.csv"');
     expect(await readFile(join(outputDir, 'sitemap.xml'), 'utf8')).toContain('<loc>https://stories.example.com/stories/ok/</loc>');
     expect(await readFile(join(outputDir, 'robots.txt'), 'utf8')).toContain('Sitemap: https://stories.example.com/sitemap.xml');
     expect(await readFile(join(outputDir, 'reports', 'failures.csv'), 'utf8')).toContain('Missing featured image');
-    expect(await readFile(join(outputDir, 'reports', 'report.json'), 'utf8')).toContain('"variant": "image-summary"');
+    const reportJson = await readFile(join(outputDir, 'reports', 'report.json'), 'utf8');
+    expect(reportJson).toContain('"variant": "image-summary"');
+    expect(reportJson).toContain('"sitemapUrls": 3');
+    expect(reportJson).toContain('"limitApplied": true');
   });
 });

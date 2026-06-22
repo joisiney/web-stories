@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { renderAmpStoryHtml } from './amp.js';
 import { AssetPreparer, type PreparedAssets, type PrepareAssetInput } from './media.js';
 import { PostMetadataResolver, type PostMetadata } from './metadata.js';
+import { DEFAULT_NETWORK_TIMEOUT_MS, fetchTextWithTimeout } from './network.js';
 import { writeGenerationOutput } from './output.js';
 import { parseSitemapXml, type SitemapEntry } from './sitemap.js';
 import { composeStory, resolveStoryMedia } from './story.js';
@@ -15,6 +16,7 @@ export interface GenerateStoriesOptions {
   publicBaseUrl: string;
   limit?: number;
   concurrency?: number;
+  networkTimeoutMs?: number;
   publisher?: string;
   publisherLogoUrl?: string;
   fetchers?: GenerateStoriesFetchers;
@@ -31,12 +33,14 @@ interface GenerateStoriesFetchers {
 export async function generateStories(options: GenerateStoriesOptions): Promise<GenerationReport> {
   const started = Date.now();
   const outputDir = resolve(options.outputDir);
+  const allEntries = await readEntries(options);
+  const entries = applyLimit(allEntries, options.limit);
+  const stories: GeneratedStory[] = [];
+  const failures: GenerationFailure[] = [];
+
   await mkdir(outputDir, { recursive: true });
   await cleanGeneratedOutput(outputDir);
 
-  const entries = await readEntries(options);
-  const stories: GeneratedStory[] = [];
-  const failures: GenerationFailure[] = [];
   await runWithConcurrency(entries, options.concurrency ?? 6, async (entry) => {
     try {
       stories.push(await generateOneStory(outputDir, entry, options));
@@ -51,6 +55,10 @@ export async function generateStories(options: GenerateStoriesOptions): Promise<
   return writeGenerationOutput({
     outputDir,
     publicBaseUrl: options.publicBaseUrl,
+    sitemapUrls: allEntries.length,
+    processed: entries.length,
+    limit: options.limit,
+    limitApplied: options.limit !== undefined && entries.length < allEntries.length,
     stories,
     failures,
     startedAt: new Date(started).toISOString(),
@@ -109,8 +117,8 @@ function usePreparedAssets(media: StoryMedia[], assets: PreparedAssets): StoryMe
 }
 
 async function readEntries(options: GenerateStoriesOptions): Promise<SitemapEntry[]> {
-  const sitemapXml = options.sitemapXml ?? await readRequiredSitemap(options.sitemapUrl, options.fetchers?.fetchText);
-  return parseSitemapXml(sitemapXml).slice(0, options.limit);
+  const sitemapXml = options.sitemapXml ?? await readRequiredSitemap(options.sitemapUrl, options.fetchers?.fetchText, options.networkTimeoutMs);
+  return parseSitemapXml(sitemapXml);
 }
 
 async function resolveMetadata(entry: SitemapEntry, options: GenerateStoriesOptions): Promise<PostMetadata> {
@@ -120,6 +128,7 @@ async function resolveMetadata(entry: SitemapEntry, options: GenerateStoriesOpti
   return new PostMetadataResolver({
     fetchJson: options.fetchers?.fetchJson,
     fetchText: options.fetchers?.fetchText,
+    networkTimeoutMs: options.networkTimeoutMs,
     publisher: options.publisher,
     publisherLogoUrl: options.publisherLogoUrl
   }).resolve(entry);
@@ -130,14 +139,27 @@ async function prepareAssets(outputDir: string, options: GenerateStoriesOptions,
   if (options.fetchers?.prepareAssets) {
     return options.fetchers.prepareAssets(input);
   }
-  return new AssetPreparer({ outputDir, publicBaseUrl: options.publicBaseUrl, fetchBinary: options.fetchers?.fetchBinary }).prepare(input);
+  return new AssetPreparer({
+    outputDir,
+    publicBaseUrl: options.publicBaseUrl,
+    fetchBinary: options.fetchers?.fetchBinary,
+    networkTimeoutMs: options.networkTimeoutMs
+  }).prepare(input);
 }
 
-async function readRequiredSitemap(sitemapUrl: string | undefined, fetchText = defaultFetchText): Promise<string> {
+async function readRequiredSitemap(
+  sitemapUrl: string | undefined,
+  fetchText: ((url: string) => Promise<string>) | undefined,
+  networkTimeoutMs = DEFAULT_NETWORK_TIMEOUT_MS
+): Promise<string> {
   if (!sitemapUrl) {
     throw new Error('A sitemap URL or sitemapXml must be provided');
   }
-  return fetchText(sitemapUrl);
+  return (fetchText ?? ((url: string) => defaultFetchText(url, networkTimeoutMs)))(sitemapUrl);
+}
+
+function applyLimit(entries: SitemapEntry[], limit: number | undefined): SitemapEntry[] {
+  return limit === undefined ? entries : entries.slice(0, limit);
 }
 
 async function runWithConcurrency<T>(items: T[], concurrency: number, worker: (item: T) => Promise<void>): Promise<void> {
@@ -151,10 +173,6 @@ async function runWithConcurrency<T>(items: T[], concurrency: number, worker: (i
   await Promise.all(workers);
 }
 
-async function defaultFetchText(url: string): Promise<string> {
-  const response = await fetch(url, { headers: { accept: 'application/xml,text/xml,text/plain,*/*' } });
-  if (!response.ok) {
-    throw new Error(`GET ${url} failed with HTTP ${response.status}`);
-  }
-  return response.text();
+async function defaultFetchText(url: string, timeoutMs: number): Promise<string> {
+  return fetchTextWithTimeout(url, 'application/xml,text/xml,text/plain,*/*', timeoutMs);
 }

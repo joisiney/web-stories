@@ -3,6 +3,7 @@ import type { GenerateStoriesOptions } from './generate-web-stories.js';
 export type GenerateCliOptions = Pick<
   GenerateStoriesOptions,
   'sitemapUrl' | 'outputDir' | 'publicBaseUrl' | 'limit' | 'concurrency' | 'publisher' | 'publisherLogoUrl'
+  | 'networkTimeoutMs'
 >;
 
 export function parseGenerateCliArgs(args: string[]): GenerateCliOptions {
@@ -18,6 +19,7 @@ export function parseGenerateCliArgs(args: string[]): GenerateCliOptions {
     publicBaseUrl: values.get('base-url') ?? 'http://localhost:8080',
     limit: parseOptionalPositiveInt(values.get('limit'), 'limit'),
     concurrency: parseOptionalPositiveInt(values.get('concurrency'), 'concurrency') ?? 6,
+    networkTimeoutMs: parseOptionalPositiveInt(values.get('network-timeout-ms'), 'network-timeout-ms'),
     publisher: values.get('publisher'),
     publisherLogoUrl: values.get('publisher-logo')
   };
@@ -53,4 +55,3 @@ function parseOptionalPositiveInt(value: string | undefined, name: string): numb
   }
   return parsed;
 }
-

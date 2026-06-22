@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { DEFAULT_NETWORK_TIMEOUT_MS, fetchBinaryWithTimeout } from './network.js';
 import { escapeHtml, sanitizeSlug, toPublicUrl } from './text.js';
 
 export interface PreparedAssets {
@@ -20,6 +21,7 @@ export interface AssetPreparerOptions {
   outputDir: string;
   publicBaseUrl: string;
   fetchBinary?: (url: string) => Promise<Buffer>;
+  networkTimeoutMs?: number;
 }
 
 const POSTER_WIDTH = 640;
@@ -34,7 +36,8 @@ export class AssetPreparer {
   private logoPromise?: Promise<string>;
 
   constructor(private readonly options: AssetPreparerOptions) {
-    this.fetchBinary = options.fetchBinary ?? fetchBinary;
+    const timeoutMs = options.networkTimeoutMs ?? DEFAULT_NETWORK_TIMEOUT_MS;
+    this.fetchBinary = options.fetchBinary ?? ((url) => fetchBinary(url, timeoutMs));
   }
 
   async prepare(input: PrepareAssetInput): Promise<PreparedAssets> {
@@ -93,12 +96,8 @@ export class AssetPreparer {
   }
 }
 
-async function fetchBinary(url: string): Promise<Buffer> {
-  const response = await fetch(url, { headers: { accept: 'image/avif,image/webp,image/*,*/*' } });
-  if (!response.ok) {
-    throw new Error(`GET ${url} failed with HTTP ${response.status}`);
-  }
-  return Buffer.from(await response.arrayBuffer());
+async function fetchBinary(url: string, timeoutMs: number): Promise<Buffer> {
+  return fetchBinaryWithTimeout(url, 'image/avif,image/webp,image/*,*/*', timeoutMs);
 }
 
 function fallbackLogo(publisher: string): Buffer {

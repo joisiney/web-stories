@@ -52,6 +52,10 @@ export interface GenerationReport {
   startedAt: string;
   finishedAt: string;
   durationMs: number;
+  sitemapUrls: number;
+  processed: number;
+  limit?: number;
+  limitApplied: boolean;
   total: number;
   succeeded: number;
   failed: number;

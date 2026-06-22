@@ -30,6 +30,7 @@ Options:
   --base-url <url>         Public base URL used in canonical/assets (default: http://localhost:8080)
   --limit <number>         Process only the first N sitemap entries
   --concurrency <number>   Concurrent item workers (default: 6)
+  --network-timeout-ms <n> Network timeout per request in milliseconds (default: 30000)
   --publisher <name>       Override publisher name
   --publisher-logo <url>   Override publisher logo URL
 `);

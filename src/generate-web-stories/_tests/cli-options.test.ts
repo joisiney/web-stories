@@ -13,13 +13,16 @@ describe('parseGenerateCliArgs', () => {
       '--limit',
       '5',
       '--concurrency',
-      '3'
+      '3',
+      '--network-timeout-ms',
+      '9000'
     ])).toEqual({
       sitemapUrl: 'https://blog.example.com/post-sitemap.xml',
       outputDir: 'public',
       publicBaseUrl: 'http://localhost:8080',
       limit: 5,
       concurrency: 3,
+      networkTimeoutMs: 9000,
       publisher: undefined,
       publisherLogoUrl: undefined
     });
@@ -27,6 +30,6 @@ describe('parseGenerateCliArgs', () => {
 
   it('recusa números inválidos em flags que controlam lote', () => {
     expect(() => parseGenerateCliArgs(['--sitemap', 'https://example.com/sitemap.xml', '--limit', '0'])).toThrow(/limit/i);
+    expect(() => parseGenerateCliArgs(['--sitemap', 'https://example.com/sitemap.xml', '--network-timeout-ms', '0'])).toThrow(/network-timeout-ms/i);
   });
 });
-

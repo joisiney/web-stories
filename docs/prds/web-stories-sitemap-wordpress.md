@@ -10,7 +10,7 @@ Construir uma automação que receba um sitemap WordPress, gere uma Web Story AM
 
 ## Fluxo Principal
 
-1. Receber `--sitemap`, `--out`, `--base-url`, `--limit`, `--concurrency`, `--publisher` e `--publisher-logo`.
+1. Receber `--sitemap`, `--out`, `--base-url`, `--limit`, `--concurrency`, `--network-timeout-ms`, `--publisher` e `--publisher-logo`.
 2. Ler XML do sitemap e extrair `loc`, `lastmod` e imagens de `image:image`.
 3. Resolver metadados por WordPress REST.
 4. Usar HTML da página como fallback para título, descrição, `og:image`, `og:video`, poster de vídeo, site name e favicon.

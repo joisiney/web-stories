@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -55,6 +55,83 @@ describe('generateStories', () => {
     expect(await readFile(join(outDir, 'reports', 'report.json'), 'utf8')).toContain('sem-midia');
   });
 
+  it('processa todas as URLs do sitemap quando nenhum limite é informado', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-all-'));
+    tempDirs.push(outDir);
+    const resolvedUrls: string[] = [];
+
+    const report = await generateStories({
+      sitemapXml: `<?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://blog.example.com/post-a/</loc></url>
+          <url><loc>https://blog.example.com/post-b/</loc></url>
+          <url><loc>https://blog.example.com/post-c/</loc></url>
+        </urlset>`,
+      outputDir: outDir,
+      publicBaseUrl: 'https://stories.example.com',
+      fetchers: {
+        resolveMetadata: async (entry) => {
+          resolvedUrls.push(entry.loc);
+          const slug = entry.loc.split('/').filter(Boolean).at(-1) ?? 'post';
+          return {
+            sourceUrl: entry.loc,
+            slug,
+            title: `Post ${slug}`,
+            description: 'Primeira frase. Segunda frase.',
+            imageUrl: `https://cdn.example.com/${slug}.webp`,
+            publisher: 'Example'
+          };
+        },
+        prepareAssets: async ({ slug }) => preparedAssets(slug)
+      }
+    });
+
+    expect(resolvedUrls).toHaveLength(3);
+    expect(report.sitemapUrls).toBe(3);
+    expect(report.processed).toBe(3);
+    expect(report.total).toBe(3);
+    expect(report.limitApplied).toBe(false);
+  });
+
+  it('registra limite aplicado no relatório e no índice gerado', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-limited-'));
+    tempDirs.push(outDir);
+
+    const report = await generateStories({
+      sitemapXml: `<?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://blog.example.com/post-a/</loc></url>
+          <url><loc>https://blog.example.com/post-b/</loc></url>
+          <url><loc>https://blog.example.com/post-c/</loc></url>
+        </urlset>`,
+      outputDir: outDir,
+      publicBaseUrl: 'https://stories.example.com',
+      limit: 2,
+      fetchers: {
+        resolveMetadata: async (entry) => {
+          const slug = entry.loc.split('/').filter(Boolean).at(-1) ?? 'post';
+          return {
+            sourceUrl: entry.loc,
+            slug,
+            title: `Post ${slug}`,
+            description: 'Primeira frase. Segunda frase.',
+            imageUrl: `https://cdn.example.com/${slug}.webp`,
+            publisher: 'Example'
+          };
+        },
+        prepareAssets: async ({ slug }) => preparedAssets(slug)
+      }
+    });
+
+    const indexHtml = await readFile(join(outDir, 'index.html'), 'utf8');
+    expect(report.sitemapUrls).toBe(3);
+    expect(report.processed).toBe(2);
+    expect(report.limit).toBe(2);
+    expect(report.limitApplied).toBe(true);
+    expect(indexHtml).toContain('Amostra de validação');
+    expect(indexHtml).toContain('2 processadas de 3 URLs lidas');
+  });
+
   it('gera story de vídeo direto quando existe poster mesmo sem imagem de capa', async () => {
     const outDir = await mkdtemp(join(tmpdir(), 'stories-video-'));
     tempDirs.push(outDir);
@@ -100,6 +177,59 @@ describe('generateStories', () => {
     })).rejects.toThrow(/Invalid sitemap XML/i);
 
     expect(resolvedItems).toBe(0);
+  });
+
+  it('não apaga a última saída válida quando o sitemap é inválido', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-preserve-'));
+    tempDirs.push(outDir);
+    await mkdir(join(outDir, 'stories', 'antigo'), { recursive: true });
+    await writeFile(join(outDir, 'stories', 'antigo', 'index.html'), 'story antiga', 'utf8');
+    await writeFile(join(outDir, 'index.html'), 'índice antigo', 'utf8');
+
+    await expect(generateStories({
+      sitemapXml: '<urlset><url><loc>https://blog.example.com/quebrado/</url></urlset>',
+      outputDir: outDir,
+      publicBaseUrl: 'https://stories.example.com',
+      fetchers: {
+        resolveMetadata: async () => {
+          throw new Error('should not resolve metadata');
+        },
+        prepareAssets: async () => preparedAssets('quebrado')
+      }
+    })).rejects.toThrow(/Invalid sitemap XML/i);
+
+    expect(await readFile(join(outDir, 'stories', 'antigo', 'index.html'), 'utf8')).toBe('story antiga');
+    expect(await readFile(join(outDir, 'index.html'), 'utf8')).toBe('índice antigo');
+  });
+
+  it('aplica timeout ao download do sitemap', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-timeout-'));
+    tempDirs.push(outDir);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = ((url: string | URL | Request, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      const signal = init?.signal;
+      if (!signal) {
+        reject(new Error(`GET ${String(url)} called without AbortSignal`));
+        return;
+      }
+      signal.addEventListener('abort', () => {
+        reject(signal.reason instanceof Error ? signal.reason : new Error(String(signal.reason)));
+      }, { once: true });
+    })) as typeof fetch;
+
+    try {
+      await expect(generateStories({
+        sitemapUrl: 'https://blog.example.com/post-sitemap.xml',
+        outputDir: outDir,
+        publicBaseUrl: 'https://stories.example.com',
+        networkTimeoutMs: 1,
+        fetchers: {
+          prepareAssets: async () => preparedAssets('post')
+        }
+      })).rejects.toThrow(/GET https:\/\/blog\.example\.com\/post-sitemap\.xml timed out after 1ms/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it('limpa stories antigas antes de uma nova execução no mesmo diretório', async () => {

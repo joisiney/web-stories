@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { DEFAULT_NETWORK_TIMEOUT_MS, fetchJsonWithTimeout, fetchTextWithTimeout } from './network.js';
 import { htmlToText, humanizeSlug, slugFromUrl, toAbsoluteUrl, truncateText } from './text.js';
 import type { SitemapEntry } from './sitemap.js';
 
@@ -18,6 +19,7 @@ export interface PostMetadata {
 export interface PostMetadataResolverDependencies {
   fetchJson?: (url: string) => Promise<unknown>;
   fetchText?: (url: string) => Promise<string>;
+  networkTimeoutMs?: number;
   publisher?: string;
   publisherLogoUrl?: string;
 }
@@ -37,8 +39,9 @@ export class PostMetadataResolver {
   private readonly fetchText: (url: string) => Promise<string>;
 
   constructor(private readonly dependencies: PostMetadataResolverDependencies = {}) {
-    this.fetchJson = dependencies.fetchJson ?? fetchJson;
-    this.fetchText = dependencies.fetchText ?? fetchText;
+    const timeoutMs = dependencies.networkTimeoutMs ?? DEFAULT_NETWORK_TIMEOUT_MS;
+    this.fetchJson = dependencies.fetchJson ?? ((url) => fetchJson(url, timeoutMs));
+    this.fetchText = dependencies.fetchText ?? ((url) => fetchText(url, timeoutMs));
   }
 
   async resolve(entry: SitemapEntry): Promise<PostMetadata> {
@@ -139,20 +142,12 @@ function firstAttr($: cheerio.CheerioAPI, selectors: string[], attr: string): st
   return '';
 }
 
-async function fetchJson(url: string): Promise<unknown> {
-  const response = await fetch(url, { headers: { accept: 'application/json' } });
-  if (!response.ok) {
-    throw new Error(`GET ${url} failed with HTTP ${response.status}`);
-  }
-  return response.json();
+async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
+  return fetchJsonWithTimeout(url, 'application/json', timeoutMs);
 }
 
-async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url, { headers: { accept: 'text/html,application/xhtml+xml' } });
-  if (!response.ok) {
-    throw new Error(`GET ${url} failed with HTTP ${response.status}`);
-  }
-  return response.text();
+async function fetchText(url: string, timeoutMs: number): Promise<string> {
+  return fetchTextWithTimeout(url, 'text/html,application/xhtml+xml', timeoutMs);
 }
 
 async function safe<T>(operation: () => Promise<T>): Promise<T | undefined> {

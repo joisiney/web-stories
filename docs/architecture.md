@@ -24,13 +24,14 @@ flowchart LR
 - `motion.ts`: centraliza intenções narrativas, timings e atributos AMP de animação.
 - `media.ts`: rasteriza poster e logo.
 - `amp.ts`: renderiza AMP HTML.
-- `output.ts`: escreve índice, sitemap, `robots.txt` e relatórios.
+- `network.ts`: centraliza `fetch` com timeout por `AbortController`.
+- `output.ts`: escreve índice operacional, sitemap, `robots.txt` e relatórios.
 - `generate-web-stories.ts`: orquestra o lote com concorrência controlada.
 - `cli-options.ts`: normaliza flags da CLI.
 
 ## Fronteiras
 
-- Rede entra por `fetchText`, `fetchJson` e `fetchBinary`.
+- Rede entra por `fetchText`, `fetchJson` e `fetchBinary`, com timeout configurável no caminho padrão.
 - Filesystem fica em `media.ts`, `output.ts` e na escrita final da story.
 - Renderização não busca rede.
 - Renderização aplica atributos AMP já decididos por `motion.ts`; não decide coreografia.
