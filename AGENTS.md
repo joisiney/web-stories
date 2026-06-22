@@ -24,6 +24,15 @@ Este projeto segue o PRD técnico em `docs/prds/web-stories-sitemap-wordpress.md
 - Toda story deve ter canonical, metadados AMP obrigatórios, OGP, Twitter Card e JSON-LD.
 - Poster e logo devem ser rasterizados localmente para cumprir o mínimo de Web Stories.
 
+## Sinais Públicos Do Avaliador Aplicáveis Ao Projeto
+
+- Tratar esta entrega como automação de integração pronta para uso: README, CLI, Docker e scripts devem permitir gerar, validar e servir a saída sem ler código-fonte.
+- Valorizar saídas operacionais e consumíveis por máquina: índice, sitemap, `robots.txt`, `report.json` e `failures.csv` devem manter schema estável, campos úteis para diagnóstico e mensagens acionáveis.
+- Integrações externas devem ser defensivas: sitemap, WordPress REST, HTML remoto, imagens, vídeos e AMP validator precisam de timeout, validação de formato, fallback explícito e erro categorizado.
+- SEO e marketing são parte central do produto: canonical, metadados sociais, JSON-LD, sitemap e assets rasterizados locais não devem ser tratados como acabamento opcional.
+- Toda nova flag ou comportamento de geração deve ter exemplo de uso em documentação e cobertura que prove o efeito observável no relatório ou HTML gerado.
+- Evitar soluções dependentes de credencial, painel ou fluxo manual quando uma saída estática e reproduzível resolver o critério de aceite.
+
 ## Testes
 
 - Testar regras públicas observáveis, não ordem interna de chamadas.

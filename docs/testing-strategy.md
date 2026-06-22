@@ -11,8 +11,9 @@ Os testes validam regras públicas observáveis. Um refactor interno que preserv
 - `amp-renderer.test.ts`: falha se HTML AMP perder metadados obrigatórios, canonical, JSON-LD, escape de conteúdo, uso de componentes AMP ou CSS dentro do orçamento seguro.
 - `amp-video-renderer.test.ts`: falha se uma página de vídeo deixar de usar `amp-video`, poster, `source` direto e atributos de motion válidos.
 - `media.test.ts`: falha se poster e logo deixarem de ser rasterizados nas dimensões esperadas.
-- `output-writer.test.ts`: falha se índice, sitemap, `robots.txt` ou relatórios deixarem de mostrar resumo de lote, warnings, artefatos e falhas.
-- `generate-web-stories.test.ts`: falha se o lote parar por erro isolado, se vídeo direto com poster não gerar uma story, se `--limit` ocultar a contagem real do sitemap, se sitemap inválido apagar saída anterior ou se download estrutural ignorar timeout.
+- `network.test.ts`: falha se rede não retentar erro transitório, se retentar erro definitivo ou se timeout final não informar o total de tentativas.
+- `output-writer.test.ts`: falha se índice, sitemap, `robots.txt` ou relatórios deixarem de mostrar resumo de lote, warnings, artefatos e falhas categorizadas.
+- `generate-web-stories.test.ts`: falha se o lote parar por erro isolado, se falhas por item perderem `code` e `stage`, se vídeo direto com poster não gerar uma story, se `--limit` ocultar a contagem real do sitemap, se sitemap inválido apagar saída anterior ou se download estrutural ignorar timeout.
 - `cli-options.test.ts`: falha se defaults operacionais ou validações de flags, incluindo timeout de rede, mudarem.
 
 ## O Que Não Testar
