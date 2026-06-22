@@ -28,6 +28,8 @@ describe('writeGenerationOutput', () => {
           storyUrl: 'https://stories.example.com/stories/ok/',
           outputPath: join(outputDir, 'stories', 'ok', 'index.html'),
           title: 'Post OK',
+          posterPortraitSrc: 'https://stories.example.com/assets/ok/poster.jpg',
+          modifiedAt: '2026-06-20T00:00:00.000Z',
           variant: 'image-summary',
           warnings: [{ code: 'unsupported-video', message: 'Vídeo ignorado porque não é direto.' }]
         }
@@ -48,13 +50,22 @@ describe('writeGenerationOutput', () => {
     expect(indexHtml).toContain('2 processadas de 3 URLs lidas');
     expect(indexHtml).toContain('1 sucesso');
     expect(indexHtml).toContain('1 falha');
+    expect(indexHtml).toContain('story-card');
+    expect(indexHtml).toContain('https://stories.example.com/assets/ok/poster.jpg');
     expect(indexHtml).toContain('unsupported-video');
     expect(indexHtml).toContain('Missing featured image for source URL');
     expect(indexHtml).toContain('href="/sitemap.xml"');
+    expect(indexHtml).toContain('href="/sitemap.xsl"');
     expect(indexHtml).toContain('href="/robots.txt"');
     expect(indexHtml).toContain('href="/reports/report.json"');
     expect(indexHtml).toContain('href="/reports/failures.csv"');
-    expect(await readFile(join(outputDir, 'sitemap.xml'), 'utf8')).toContain('<loc>https://stories.example.com/stories/ok/</loc>');
+    const sitemapXml = await readFile(join(outputDir, 'sitemap.xml'), 'utf8');
+    expect(sitemapXml).toContain('<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>');
+    expect(sitemapXml).toContain('<loc>https://stories.example.com/stories/ok/</loc>');
+    expect(sitemapXml).toContain('<lastmod>2026-06-20T00:00:00.000Z</lastmod>');
+    const sitemapXsl = await readFile(join(outputDir, 'sitemap.xsl'), 'utf8');
+    expect(sitemapXsl).toContain('Web Stories Sitemap');
+    expect(sitemapXsl).toContain('Sitemap URLs');
     expect(await readFile(join(outputDir, 'robots.txt'), 'utf8')).toContain('Sitemap: https://stories.example.com/sitemap.xml');
     const failuresCsv = await readFile(join(outputDir, 'reports', 'failures.csv'), 'utf8');
     expect(failuresCsv).toContain('url,code,stage,reason');

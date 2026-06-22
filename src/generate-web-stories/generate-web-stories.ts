@@ -63,6 +63,7 @@ async function cleanGeneratedOutput(outputDir: string): Promise<void> {
     rm(join(outputDir, 'reports'), { recursive: true, force: true }),
     rm(join(outputDir, 'index.html'), { force: true }),
     rm(join(outputDir, 'sitemap.xml'), { force: true }),
+    rm(join(outputDir, 'sitemap.xsl'), { force: true }),
     rm(join(outputDir, 'robots.txt'), { force: true })
   ]);
 }
