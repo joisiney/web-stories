@@ -1,0 +1,41 @@
+{
+  "name": "wordpress-sitemap-web-stories",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Automacao de Web Stories AMP a partir de sitemap WordPress.",
+  "bin": {
+    "web-stories": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "pnpm lint && pnpm test && pnpm build",
+    "generate": "tsx src/cli.ts generate",
+    "lint": "tsc --noEmit",
+    "serve": "tsx src/server.ts",
+    "start": "node dist/server.js --dir public --port 8080",
+    "test": "vitest run",
+    "validate:amp": "tsx src/validate-amp.ts public/stories"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "fast-xml-parser": "^4.5.0",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "amphtml-validator": "^1.0.35",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  }
+}

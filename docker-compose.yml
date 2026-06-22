@@ -1,0 +1,16 @@
+services:
+  web-stories:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      SITEMAP_URL: ${SITEMAP_URL:-https://blog.jota.ai/post-sitemap.xml}
+      OUTPUT_DIR: public
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      LIMIT: ${LIMIT:-}
+      CONCURRENCY: ${CONCURRENCY:-6}
+      PORT: 8080
+      PUBLISHER: ${PUBLISHER:-}
+      PUBLISHER_LOGO: ${PUBLISHER_LOGO:-}
+    volumes:
+      - ./public:/app/public

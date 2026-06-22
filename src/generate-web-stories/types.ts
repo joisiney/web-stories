@@ -1,0 +1,61 @@
+export type StoryVariant = 'image-summary' | 'video-first' | 'mixed-media' | 'gallery' | 'fallback-summary';
+
+export type StoryMotionIntent = 'cover' | 'context' | 'cta' | 'video';
+
+export interface StoryQualityIssue {
+  code: string;
+  message: string;
+}
+
+export type StoryMedia =
+  | { kind: 'image'; src: string }
+  | { kind: 'video'; src: string; posterSrc: string; mimeType: 'video/mp4' | 'video/webm' };
+
+export interface StoryPage {
+  id: string;
+  heading: string;
+  text: string;
+  motion: StoryMotionIntent;
+  media: StoryMedia;
+}
+
+export interface StoryModel {
+  slug: string;
+  sourceUrl: string;
+  canonicalUrl: string;
+  title: string;
+  description: string;
+  publisher: string;
+  logoSrc: string;
+  posterPortraitSrc: string;
+  heroImageSrc: string;
+  variant: StoryVariant;
+  modifiedAt?: string;
+  pages: StoryPage[];
+}
+
+export interface GeneratedStory {
+  sourceUrl: string;
+  storyUrl: string;
+  outputPath: string;
+  title: string;
+  variant: StoryVariant;
+  warnings: StoryQualityIssue[];
+}
+
+export interface GenerationFailure {
+  url: string;
+  reason: string;
+}
+
+export interface GenerationReport {
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  total: number;
+  succeeded: number;
+  failed: number;
+  outputDir: string;
+  stories: GeneratedStory[];
+  failures: GenerationFailure[];
+}
