@@ -64,7 +64,7 @@ describe('generate-web-stories story variants', () => {
       sourceUrl: 'https://blog.example.com/post/',
       slug: 'post',
       title: 'Post com resumo',
-      description: 'Primeira frase curta. Segunda frase com contexto adicional.',
+      description: 'Primeira frase curta. Segunda frase com contexto adicional. Terceira frase com um detalhe prático. Quarta frase com uma atenção importante. Quinta frase com fechamento.',
       publisher: 'Example',
       logoSrc: 'https://stories.example.com/assets/logo.png',
       posterPortraitSrc: 'https://stories.example.com/assets/poster.jpg',
@@ -72,12 +72,18 @@ describe('generate-web-stories story variants', () => {
       media: [{ kind: 'image', src: 'https://stories.example.com/assets/post/story-image.jpg' }]
     });
 
+    expect(story.pages).toHaveLength(6);
     expect(story.pages[0]?.text).toBe('Primeira frase curta.');
     expect(story.pages[1]?.text).toBe('Segunda frase com contexto adicional.');
-    expect(story.pages[2]?.text).toBe('Veja o artigo completo para conferir detalhes e contexto.');
+    expect(story.pages[2]?.text).toBe('Terceira frase com um detalhe prático.');
+    expect(story.pages[3]?.text).toBe('Quarta frase com uma atenção importante.');
+    expect(story.pages[4]?.text).toBe('Quinta frase com fechamento.');
+    expect(story.pages[5]?.heading).toBe('Continue lendo');
+    expect(story.pages[5]?.autoAdvanceAfter).toBeUndefined();
+    expect(story.pages.slice(0, -1).every((page) => page.autoAdvanceAfter === '7s')).toBe(true);
   });
 
-  it('mantém texto de resumo válido quando a descrição tem uma única frase', () => {
+  it('mantém narrativa com páginas úteis quando a descrição tem uma única frase', () => {
     const story = composeStory({
       sourceUrl: 'https://blog.example.com/post/',
       slug: 'post',
@@ -90,8 +96,10 @@ describe('generate-web-stories story variants', () => {
       media: [{ kind: 'image', src: 'https://stories.example.com/assets/post/story-image.jpg' }]
     });
 
+    expect(story.pages).toHaveLength(6);
     expect(story.pages[0]?.text).toBe('Descrição única e curta.');
-    expect(story.pages[1]?.text).toBe('Descrição única e curta.');
+    expect(new Set(story.pages.map((page) => page.heading)).size).toBe(story.pages.length);
     expect(story.pages.every((page) => page.text.length > 0)).toBe(true);
+    expect(story.pages[5]?.autoAdvanceAfter).toBeUndefined();
   });
 });

@@ -19,6 +19,7 @@ describe('renderAmpStoryHtml', () => {
         id: 'cover',
         heading: 'Post A',
         text: 'Resumo curto.',
+        autoAdvanceAfter: '7s',
         motion: 'cover',
         media: { kind: 'image', src: 'https://cdn.example.com/a.webp' }
       }]
@@ -32,6 +33,7 @@ describe('renderAmpStoryHtml', () => {
     expect(html).toContain('<link rel="canonical" href="https://stories.example.com/stories/post-a/">');
     expect(html).toContain('<script type="application/ld+json">');
     expect(html).toContain('animate-in="zoom-in"');
+    expect(html).toContain('<amp-story-page id="cover" auto-advance-after="7s">');
     expect(html).toContain('animate-in-timing-function="cubic-bezier(0.22, 1, 0.36, 1)"');
     expect(html).toContain('animate-in-delay=".25s"');
     expect(html).not.toContain('<img ');
@@ -53,6 +55,7 @@ describe('renderAmpStoryHtml', () => {
         id: 'cover',
         heading: '<b>Oi</b>',
         text: 'Texto & valor',
+        autoAdvanceAfter: '7s',
         motion: 'cover',
         media: { kind: 'image', src: 'https://cdn.example.com/x.webp' }
       }]
@@ -79,6 +82,7 @@ describe('renderAmpStoryHtml', () => {
         id: 'cover',
         heading: 'Post A',
         text: 'Resumo curto.',
+        autoAdvanceAfter: '7s',
         motion: 'cover',
         media: { kind: 'image', src: 'https://cdn.example.com/a.webp' }
       }]
@@ -106,6 +110,7 @@ describe('renderAmpStoryHtml', () => {
         id: 'cover',
         heading: 'Superpalavraeditorialsemquebranaturalparaavaliarrobustezvisual',
         text: 'Texto com outra palavraextremamentelongaqueprecisaquebrardentrodocontainer.',
+        autoAdvanceAfter: '7s',
         motion: 'cover',
         media: { kind: 'image', src: 'https://cdn.example.com/longo.webp' }
       }]

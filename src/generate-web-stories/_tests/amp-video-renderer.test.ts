@@ -20,6 +20,7 @@ describe('renderAmpStoryHtml video support', () => {
           id: 'video',
           heading: 'Post com vídeo',
           text: 'Resumo curto.',
+          autoAdvanceAfter: 'video-media',
           motion: 'video',
           media: {
             kind: 'video',
@@ -32,7 +33,9 @@ describe('renderAmpStoryHtml video support', () => {
     });
 
     expect(html).toContain('custom-element="amp-video"');
-    expect(html).toContain('<amp-video autoplay loop');
+    expect(html).toContain('<amp-story-page id="video" auto-advance-after="video-media">');
+    expect(html).toContain('<amp-video id="video-media" autoplay');
+    expect(html).not.toContain('<amp-video autoplay loop');
     expect(html).toContain('poster="https://stories.example.com/assets/poster.jpg"');
     expect(html).toContain('<source src="https://cdn.example.com/highlight.mp4" type="video/mp4">');
     expect(html).toContain('animate-in-timing-function="cubic-bezier(0.16, 1, 0.3, 1)"');
@@ -55,6 +58,7 @@ describe('renderAmpStoryHtml video support', () => {
           id: 'video',
           heading: 'Post com vídeo',
           text: 'Resumo curto.',
+          autoAdvanceAfter: 'video-media',
           motion: 'video',
           media: {
             kind: 'video',

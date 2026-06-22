@@ -200,7 +200,10 @@ describe('generateStories', () => {
     });
 
     expect(report.stories[0]?.variant).toBe('video-first');
-    expect(await readFile(join(outDir, 'stories', 'video', 'index.html'), 'utf8')).toContain('<amp-video autoplay loop');
+    const html = await readFile(join(outDir, 'stories', 'video', 'index.html'), 'utf8');
+    expect(html).toContain('<amp-video id="video-media" autoplay');
+    expect(html).toContain('auto-advance-after="video-media"');
+    expect(html).not.toContain('<amp-video autoplay loop');
   });
 
   it('aborta sitemap malformado antes de processar itens do lote', async () => {

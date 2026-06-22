@@ -22,8 +22,10 @@ export interface ComposeStoryInput {
 
 const TITLE_LIMIT = 90;
 const DESCRIPTION_LIMIT = 180;
-const PAGE_TEXT_LIMIT = 180;
+const PAGE_TEXT_LIMIT = 170;
 const TEXT_HEAVY_LIMIT = 1600;
+const IMAGE_AUTO_ADVANCE = '7s';
+const VIDEO_AUTO_ADVANCE_ID = 'video-media';
 
 export function resolveStoryMedia(input: ResolveStoryMediaInput): { media: StoryMedia[]; warnings: StoryQualityIssue[] } {
   const media: StoryMedia[] = [];
@@ -75,31 +77,48 @@ export function composeStory(input: ComposeStoryInput): StoryModel {
 function createPages(title: string, description: string, media: StoryMedia[], heroImage: string): StoryModel['pages'] {
   const imageMedia = media.find((item) => item.kind === 'image') ?? { kind: 'image' as const, src: heroImage };
   const videoMedia = media.find((item) => item.kind === 'video');
-  const copy = storyCopy(description);
+  const copy = storyCopy(title, description);
+  const narrativePages = [
+    { id: 'cover', heading: title, text: copy.coverText, motion: 'cover' as const, media: imageMedia },
+    { id: 'point', heading: 'Ponto central', text: copy.pointText, motion: 'context' as const, media: imageMedia },
+    { id: 'context', heading: 'Contexto', text: copy.contextText, motion: 'context' as const, media: imageMedia },
+    { id: 'detail', heading: 'Na prática', text: copy.detailText, motion: 'context' as const, media: imageMedia },
+    { id: 'decision', heading: 'Antes de decidir', text: copy.decisionText, motion: 'context' as const, media: imageMedia }
+  ].map((page) => ({ ...page, autoAdvanceAfter: IMAGE_AUTO_ADVANCE }));
 
   if (videoMedia) {
     return [
-      { id: 'video', heading: title, text: copy.coverText, motion: 'video', media: videoMedia },
-      { id: 'context', heading: 'Resumo', text: copy.summaryText, motion: 'context', media: imageMedia },
+      { id: 'video', heading: title, text: copy.coverText, autoAdvanceAfter: VIDEO_AUTO_ADVANCE_ID, motion: 'video', media: videoMedia },
+      ...narrativePages.slice(1),
       { id: 'cta', heading: 'Continue lendo', text: copy.ctaText, motion: 'cta', media: imageMedia }
     ];
   }
 
   return [
-    { id: 'cover', heading: title, text: copy.coverText, motion: 'cover', media: imageMedia },
-    { id: 'summary', heading: 'Resumo', text: copy.summaryText, motion: 'context', media: imageMedia },
+    ...narrativePages,
     { id: 'cta', heading: 'Continue lendo', text: copy.ctaText, motion: 'cta', media: imageMedia }
   ];
 }
 
-function storyCopy(description: string): { coverText: string; summaryText: string; ctaText: string } {
+function storyCopy(title: string, description: string): {
+  coverText: string;
+  pointText: string;
+  contextText: string;
+  detailText: string;
+  decisionText: string;
+  ctaText: string;
+} {
   const sentences = description.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [];
-  const firstSentence = sentences[0] ?? description;
-  const remainingText = sentences.slice(1).join(' ');
+  const fallback = description || title;
+  const sentence = (index: number, fallbackText: string): string => truncateText(sentences[index] ?? fallbackText, PAGE_TEXT_LIMIT);
+
   return {
-    coverText: truncateText(firstSentence, 160),
-    summaryText: truncateText(remainingText || description, PAGE_TEXT_LIMIT),
-    ctaText: 'Veja o artigo completo para conferir detalhes e contexto.'
+    coverText: sentence(0, fallback),
+    pointText: sentence(1, `O ponto principal é entender como ${title} se aplica ao contexto do artigo.`),
+    contextText: sentence(2, `A leitura organiza os critérios essenciais antes de seguir para a decisão.`),
+    detailText: sentence(3, `Use os detalhes do post original para comparar requisitos, custos e próximos passos.`),
+    decisionText: sentence(4, `Confira o contexto completo antes de escolher o melhor caminho para o seu caso.`),
+    ctaText: 'Abra o artigo original para conferir detalhes, fontes e contexto completo.'
   };
 }
 

@@ -15,6 +15,7 @@ export interface StoryPage {
   id: string;
   heading: string;
   text: string;
+  autoAdvanceAfter?: string;
   motion: StoryMotionIntent;
   media: StoryMedia;
 }
@@ -39,6 +40,8 @@ export interface GeneratedStory {
   storyUrl: string;
   outputPath: string;
   title: string;
+  posterPortraitSrc: string;
+  modifiedAt?: string;
   variant: StoryVariant;
   warnings: StoryQualityIssue[];
 }

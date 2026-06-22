@@ -47,7 +47,16 @@ export async function generateOneStory(entry: SitemapEntry, options: GenerateOne
     const outputPath = join(options.outputDir, 'stories', story.slug, 'index.html');
     await mkdir(join(options.outputDir, 'stories', story.slug), { recursive: true });
     await writeFile(outputPath, renderAmpStoryHtml(story), 'utf8');
-    return { sourceUrl: story.sourceUrl, storyUrl: story.canonicalUrl, outputPath, title: story.title, variant: story.variant, warnings: media.warnings };
+    return {
+      sourceUrl: story.sourceUrl,
+      storyUrl: story.canonicalUrl,
+      outputPath,
+      title: story.title,
+      posterPortraitSrc: story.posterPortraitSrc,
+      modifiedAt: story.modifiedAt,
+      variant: story.variant,
+      warnings: media.warnings
+    };
   } catch (error) {
     throw storyError(error, 'render-failed', 'render');
   }

@@ -52,13 +52,17 @@ ${story.pages.map((page, index) => renderPage(story, page, index)).join('\n')}
 function renderPage(story: StoryModel, page: StoryPage, index: number): string {
   const titleTag = index === 0 ? 'h1' : 'h2';
   const motion = storyMotionForIntent(page.motion);
+  const pageAttributes = [
+    `id="${escapeHtml(page.id)}"`,
+    page.autoAdvanceAfter ? `auto-advance-after="${escapeHtml(page.autoAdvanceAfter)}"` : ''
+  ].filter(Boolean).join(' ');
   const cta = index === story.pages.length - 1
     ? `<a class="cta" href="${escapeHtml(story.sourceUrl)}" target="_blank" rel="noopener" ${renderAmpAttributes(motion.cta)}>Ler artigo</a>`
     : '';
 
-  return `    <amp-story-page id="${escapeHtml(page.id)}">
+  return `    <amp-story-page ${pageAttributes}>
       <amp-story-grid-layer template="fill">
-${renderMedia(story, page.media, motion.media)}
+${renderMedia(story, page, motion.media)}
       </amp-story-grid-layer>
       <amp-story-grid-layer template="fill"><div class="shade"></div></amp-story-grid-layer>
       <amp-story-grid-layer template="vertical" class="brand">
@@ -72,15 +76,20 @@ ${renderMedia(story, page.media, motion.media)}
     </amp-story-page>`;
 }
 
-function renderMedia(story: StoryModel, media: StoryMedia, motion: AmpMotionAttributes): string {
+function renderMedia(story: StoryModel, page: StoryPage, motion: AmpMotionAttributes): string {
+  const media = page.media;
   const animationAttrs = renderAmpAttributes(motion);
   if (media.kind === 'video') {
-    return `        <amp-video autoplay loop layout="fill" poster="${escapeHtml(media.posterSrc)}" ${animationAttrs}>
+    return `        <amp-video id="${escapeHtml(videoElementId(page))}" autoplay layout="fill" poster="${escapeHtml(media.posterSrc)}" ${animationAttrs}>
           <source src="${escapeHtml(media.src)}" type="${escapeHtml(media.mimeType)}">
         </amp-video>`;
   }
 
   return `        <amp-img class="hero-image" src="${escapeHtml(media.src)}" layout="fill" alt="${escapeHtml(story.title)}" ${animationAttrs}></amp-img>`;
+}
+
+function videoElementId(page: StoryPage): string {
+  return page.autoAdvanceAfter && !page.autoAdvanceAfter.endsWith('s') ? page.autoAdvanceAfter : `${page.id}-media`;
 }
 
 function createStructuredData(story: StoryModel): Record<string, unknown> {
