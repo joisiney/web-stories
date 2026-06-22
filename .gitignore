@@ -2,7 +2,16 @@ node_modules/
 dist/
 public/
 coverage/
+.cache/
+.turbo/
+.pnpm-store/
 .DS_Store
+.envrc
+.npmrc
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .env
 .env.*
 !.env.example
