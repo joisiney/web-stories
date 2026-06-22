@@ -17,19 +17,22 @@ flowchart LR
   G --> H["motion presets"]
   H --> I["AMP renderer"]
   I --> J["output"]
+  J --> K["index gallery + sitemap XSL"]
 ```
 
 ## Módulos
 
 - `sitemap.ts`: transforma XML em entradas de post.
 - `metadata.ts`: resolve título, descrição, publisher, imagem e vídeo por REST/HTML.
-- `story.ts`: aplica regras de variante, texto curto, fallback de vídeo e composição das páginas.
+- `story.ts`: aplica regras de variante, texto curto, fallback de vídeo e composição das 6 páginas.
 - `motion.ts`: centraliza intenções narrativas, timings e atributos AMP de animação.
 - `media.ts`: rasteriza poster e logo.
 - `story-generator.ts`: gera uma story individual e classifica falhas por estágio.
 - `amp.ts`: renderiza AMP HTML.
 - `network.ts`: centraliza `fetch` com timeout, retry e backoff.
-- `output.ts`: escreve índice operacional, sitemap, `robots.txt` e relatórios.
+- `output.ts`: escreve índice operacional, sitemap, XSL, `robots.txt` e relatórios.
+- `output-index.ts`: renderiza a galeria operacional da raiz.
+- `output-sitemap.ts`: renderiza `sitemap.xml` com `xml-stylesheet` e `sitemap.xsl`.
 - `generate-web-stories.ts`: orquestra o lote com concorrência controlada.
 - `cli-options.ts`: normaliza flags da CLI.
 
@@ -46,7 +49,8 @@ flowchart LR
 
 - `generate-web-stories.ts` é o módulo de lote. Sua interface recebe opções de geração e retorna `GenerationReport`; a implementação cuida de sitemap, limite, concorrência, limpeza e ordenação.
 - `story-generator.ts` é o módulo de item. Sua interface recebe uma entrada de sitemap e opções compartilhadas; a implementação concentra metadados, mídia, assets, renderização e falha categorizada.
-- `output.ts` é o módulo operacional. Sua interface recebe histórias e falhas; a implementação mantém estáveis índice, sitemap, `robots.txt`, `report.json` e `failures.csv`.
+- `output.ts` é o módulo operacional. Sua interface recebe histórias e falhas; a implementação coordena a escrita de índice, sitemap, XSL, `robots.txt`, `report.json` e `failures.csv`.
+- `output-index.ts` e `output-sitemap.ts` são renderers locais da slice. Eles não buscam rede nem escrevem arquivos; só transformam o relatório em HTML/XML/XSL.
 - `network.ts` é o módulo de integração externa. Sua interface continua simples (`fetchTextWithTimeout`, `fetchJsonWithTimeout`, `fetchBinaryWithTimeout`), enquanto timeout, retry e backoff ficam escondidos na implementação.
 
 ## Padrões De Engenharia

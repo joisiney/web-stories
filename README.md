@@ -15,7 +15,10 @@ Saída: uma Web Story AMP por post, assets locais rasterizados, índice operacio
 - Gera AMP com `amp-story`, `amp-img` e `amp-video` quando aplicável.
 - Inclui canonical, metadados AMP obrigatórios, OGP, Twitter Card e JSON-LD.
 - Rasteriza localmente imagem vertical, poster 3:4 e logo 1:1 com `sharp`.
-- Aplica animação AMP-native moderada: zoom, pan e fade por intenção narrativa.
+- Compõe 6 páginas por story: capa, ponto central, contexto, detalhe, decisão e CTA.
+- Aplica animação AMP-native moderada e autoavanço nas páginas narrativas.
+- Mantém o CTA final sem autoavanço para preservar o clique no artigo original.
+- Gera sitemap XML das stories com `xml-stylesheet`, `lastmod` e XSL visual.
 - Mantém falhas por item no relatório sem interromper o lote.
 - Trata sitemap inválido como falha estrutural antes de limpar a última saída válida.
 - Usa timeout por tentativa e retry/backoff automático para falhas transitórias de rede.
@@ -26,13 +29,15 @@ Saída: uma Web Story AMP por post, assets locais rasterizados, índice operacio
 ```bash
 pnpm install
 pnpm check
-pnpm generate --sitemap https://blog.jota.ai/post-sitemap.xml --out public --base-url http://localhost:8080 --limit 3
+pnpm generate --sitemap https://blog.jota.ai/post-sitemap.xml --out public --base-url http://localhost:8080 --limit 20
 pnpm validate:amp
 pnpm serve --dir public --port 8080
 docker compose config
 ```
 
 Acesse `http://localhost:8080` após o `serve`.
+
+Para um smoke test rápido, use `--limit 3`. Para avaliação visual e técnica, prefira `--limit 20`, pois a raiz exibe uma galeria de Web Stories e o sitemap das stories fica mais representativo.
 
 Para processar o sitemap completo, remova `--limit`:
 
@@ -53,7 +58,7 @@ Variáveis suportadas:
 ```bash
 SITEMAP_URL=https://blog.jota.ai/post-sitemap.xml
 PUBLIC_BASE_URL=http://localhost:8080
-LIMIT=10
+LIMIT=20
 CONCURRENCY=6
 NETWORK_TIMEOUT_MS=30000
 PORT=8080
@@ -75,7 +80,9 @@ Principais módulos:
 - `story-generator.ts`: gera uma story individual e classifica falhas do item.
 - `generate-web-stories.ts`: orquestra lote, limite, concorrência, limpeza e relatório.
 - `amp.ts`: renderiza HTML AMP sem buscar rede.
-- `output.ts`: escreve índice, sitemap, `robots.txt` e relatórios.
+- `output.ts`: escreve índice, sitemap, XSL, `robots.txt` e relatórios.
+- `output-index.ts`: renderiza a galeria operacional da raiz.
+- `output-sitemap.ts`: renderiza `sitemap.xml` e `sitemap.xsl`.
 - `network.ts`: centraliza `fetch` com timeout, retry e backoff.
 
 Essa divisão mantém interfaces pequenas e implementação localizada: funções que buscam rede não renderizam HTML nem escrevem arquivos, renderers não buscam rede, resolvers não escrevem arquivos.
@@ -86,8 +93,9 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
 - `public/assets/<slug>/poster-portrait.jpg`: poster 3:4.
 - `public/assets/<slug>/story-image.jpg`: imagem vertical 9:16.
 - `public/assets/shared/publisher-logo.png`: logo raster 1:1.
-- `public/index.html`: índice operacional.
-- `public/sitemap.xml`: sitemap das Web Stories.
+- `public/index.html`: galeria operacional com métricas, cards e links técnicos.
+- `public/sitemap.xml`: sitemap XML das Web Stories com stylesheet XSL.
+- `public/sitemap.xsl`: apresentação visual do sitemap no navegador.
 - `public/robots.txt`: referência ao sitemap das Web Stories.
 - `public/reports/report.json`: relatório estruturado.
 - `public/reports/failures.csv`: falhas por item.
@@ -105,6 +113,8 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
       "sourceUrl": "https://blog.example.com/post/",
       "storyUrl": "http://localhost:8080/stories/post/",
       "title": "Título",
+      "posterPortraitSrc": "http://localhost:8080/assets/post/poster-portrait.jpg",
+      "modifiedAt": "2026-06-22T05:09:25-03:00",
       "variant": "image-summary",
       "warnings": []
     }
@@ -142,13 +152,16 @@ Códigos de falha por item:
 - Retry/backoff fica na fronteira de rede, sem contaminar renderers ou resolvers.
 - Testes validam comportamento público observável, não ordem interna de chamadas.
 - Sitemap inválido aborta a execução; falhas de posts individuais entram no relatório.
+- A raiz (`/`) é uma galeria de avaliação; `/sitemap.xml` é o sitemap XML rastreável e visualmente estilizado via XSL.
 
 ## Documentação Técnica Consultada
 
 - Google Web Stories: `https://developers.google.com/search/docs/appearance/enable-web-stories`
 - Boas práticas de Web Stories: `https://developers.google.com/search/docs/appearance/web-stories-creation-best-practices`
+- AMP Web Story technical details: `https://amp.dev/documentation/guides-and-tutorials/learn/webstory_technical_details/`
 - AMP story: `https://amp.dev/documentation/components/amp-story/`
 - AMP video: `https://amp.dev/documentation/components/amp-video/`
 - Validação AMP: `https://amp.dev/documentation/guides-and-tutorials/learn/validation-workflow/validate_amp/`
 - Sitemaps: `https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap`
 - Image sitemaps: `https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps`
+- XML Stylesheet: `https://www.w3.org/TR/xml-stylesheet/`
