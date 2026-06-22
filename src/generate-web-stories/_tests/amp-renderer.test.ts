@@ -30,10 +30,12 @@ describe('renderAmpStoryHtml', () => {
     expect(html).toContain('<amp-story');
     expect(html).toContain('publisher-logo-src="https://stories.example.com/assets/logo.png"');
     expect(html).toContain('poster-portrait-src="https://stories.example.com/assets/poster.jpg"');
+    expect(html).not.toContain('supports-landscape');
     expect(html).toContain('<link rel="icon" href="https://stories.example.com/assets/logo.png">');
     expect(html).toContain('<link rel="canonical" href="https://stories.example.com/stories/post-a/">');
     expect(html).toContain('<script type="application/ld+json">');
-    expect(html).toContain('animate-in="zoom-in"');
+    expect(html).toContain('animate-in="zoom-out"');
+    expect(html).not.toContain('<amp-story-page-outlink');
     expect(html).toContain('<amp-story-page id="cover" auto-advance-after="7s">');
     expect(html).toContain('animate-in-timing-function="cubic-bezier(0.22, 1, 0.36, 1)"');
     expect(html).toContain('animate-in-delay=".55s"');
@@ -91,6 +93,7 @@ describe('renderAmpStoryHtml', () => {
     const css = html.match(/<style amp-custom>(?<css>.*?)<\/style>/s)?.groups?.css ?? '';
 
     expect(css.length).toBeLessThan(75000);
+    expect(css).not.toContain('.cta{');
     expect(css).not.toMatch(/@keyframes[\s\S]*\b(width|height|padding|margin|top|left|right|bottom)\b/);
     expect(css).not.toContain('!important');
   });
@@ -199,7 +202,13 @@ describe('renderAmpStoryHtml', () => {
     expect(html).toContain('<amp-story-animation layout="nodisplay" trigger="visibility">');
     expect(html).toContain('decision-callout-line');
     expect(html).toContain('<amp-story-page id="cta">');
+    expect(html).toContain('<amp-story-page-outlink layout="nodisplay" theme="custom" cta-accent-element="background" cta-accent-color="#f8f3ea">');
+    expect(html).toContain('<a href="https://blog.example.com/stories/post-editorial/">Ler artigo</a>');
+    expect(html).not.toContain('class="cta"');
+    expect(html).not.toContain('supports-landscape');
     expect(html).not.toContain('<amp-story-page id="cta" auto-advance-after');
+    const ctaPage = html.match(/<amp-story-page id="cta">[\s\S]*?<\/amp-story-page>/)?.[0] ?? '';
+    expect(ctaPage).toMatch(/<\/amp-story-grid-layer>\n      <amp-story-page-outlink[\s\S]*<\/amp-story-page-outlink>\n    <\/amp-story-page>$/);
 
     const validator = await amphtmlValidator.getInstance();
     expect(validator.validateString(html).status).toBe('PASS');

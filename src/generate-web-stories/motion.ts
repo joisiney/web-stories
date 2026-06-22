@@ -14,7 +14,6 @@ export interface StoryMotionPreset {
   media: AmpMotionAttributes;
   heading: AmpMotionAttributes;
   text: AmpMotionAttributes;
-  cta: AmpMotionAttributes;
 }
 
 const EASE_OUT_EXPO = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -33,14 +32,8 @@ const EDITORIAL_COPY_MOTION = {
     duration: '.45s',
     delay: '.25s',
     timingFunction: EASE_OUT_QUART
-  },
-  cta: {
-    animateIn: 'fly-in-bottom',
-    duration: '.45s',
-    delay: '.35s',
-    timingFunction: EASE_OUT_EXPO
   }
-} satisfies Pick<StoryMotionPreset, 'heading' | 'text' | 'cta'>;
+} satisfies Pick<StoryMotionPreset, 'heading' | 'text'>;
 
 const STORY_MOTION_PRESETS = {
   cover: {
@@ -58,14 +51,6 @@ const STORY_MOTION_PRESETS = {
     text: {
       ...EDITORIAL_COPY_MOTION.text,
       delay: '.55s'
-    },
-    cta: {
-      animateIn: 'zoom-in',
-      duration: '.38s',
-      delay: '.35s',
-      timingFunction: EASE_OUT_EXPO,
-      scaleStart: '.96',
-      scaleEnd: '1'
     }
   },
   point: {
@@ -102,8 +87,7 @@ const STORY_MOTION_PRESETS = {
       ...EDITORIAL_COPY_MOTION.text,
       animateIn: 'fly-in-bottom',
       delay: '.34s'
-    },
-    cta: EDITORIAL_COPY_MOTION.cta
+    }
   },
   decision: {
     media: {

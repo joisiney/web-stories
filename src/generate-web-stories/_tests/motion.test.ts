@@ -26,7 +26,7 @@ describe('story motion presets', () => {
     );
   });
 
-  it('orquestra título, texto e CTA sem repetir valores mágicos no renderer', () => {
+  it('orquestra título e texto sem repetir valores mágicos no renderer', () => {
     const cover = storyMotionForIntent('cover');
 
     expect(renderAmpAttributes(cover.heading)).toBe(
@@ -34,9 +34,6 @@ describe('story motion presets', () => {
     );
     expect(renderAmpAttributes(cover.text)).toBe(
       'animate-in="fade-in" animate-in-duration=".45s" animate-in-delay=".55s" animate-in-timing-function="cubic-bezier(0.25, 1, 0.5, 1)"'
-    );
-    expect(renderAmpAttributes(cover.cta)).toBe(
-      'animate-in="zoom-in" animate-in-duration=".38s" animate-in-delay=".35s" animate-in-timing-function="cubic-bezier(0.16, 1, 0.3, 1)" scale-start=".96" scale-end="1"'
     );
   });
 });

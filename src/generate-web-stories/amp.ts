@@ -41,8 +41,7 @@ export function renderAmpStoryHtml(story: StoryModel): string {
     title="${escapeHtml(story.title)}"
     publisher="${escapeHtml(story.publisher)}"
     publisher-logo-src="${escapeHtml(story.logoSrc)}"
-    poster-portrait-src="${escapeHtml(story.posterPortraitSrc)}"
-    supports-landscape>
+    poster-portrait-src="${escapeHtml(story.posterPortraitSrc)}">
 ${story.pages.map((page, index) => renderPage(story, page, index)).join('\n')}
   </amp-story>
 </body>
@@ -57,10 +56,11 @@ function renderPage(story: StoryModel, page: StoryPage, index: number): string {
     `id="${escapeHtml(page.id)}"`,
     page.autoAdvanceAfter ? `auto-advance-after="${escapeHtml(page.autoAdvanceAfter)}"` : ''
   ].filter(Boolean).join(' ');
-  const cta = index === story.pages.length - 1
-    ? `<a class="cta" href="${escapeHtml(story.sourceUrl)}" target="_blank" rel="noopener" ${renderAmpAttributes(motion.cta)}>Ler artigo</a>`
-    : '';
   const layout = pageLayout(page);
+  const trailingElements = [
+    renderDecisionAnimation(page),
+    renderPageOutlink(story, page, index)
+  ].filter(Boolean).join('\n');
 
   return `    <amp-story-page ${pageAttributes}>
       <amp-story-grid-layer template="fill">
@@ -73,9 +73,8 @@ ${renderMedia(story, page, motion.media)}
       <amp-story-grid-layer template="vertical" class="content content--${escapeHtml(layout)}">
         <${titleTag} ${renderAmpAttributes(motion.heading)}>${escapeHtml(page.heading)}</${titleTag}>
         ${renderPageText(page, motion.text)}
-        ${cta}
       </amp-story-grid-layer>
-${renderDecisionAnimation(page)}
+${trailingElements}
     </amp-story-page>`;
 }
 
@@ -111,6 +110,16 @@ function renderDecisionAnimation(page: StoryPage): string {
   return `      <amp-story-animation layout="nodisplay" trigger="visibility">
         <script type="application/json">${config}</script>
       </amp-story-animation>`;
+}
+
+function renderPageOutlink(story: StoryModel, page: StoryPage, index: number): string {
+  if (index !== story.pages.length - 1 || pageLayout(page) !== 'cta') {
+    return '';
+  }
+
+  return `      <amp-story-page-outlink layout="nodisplay" theme="custom" cta-accent-element="background" cta-accent-color="#f8f3ea">
+        <a href="${escapeHtml(story.sourceUrl)}">Ler artigo</a>
+      </amp-story-page-outlink>`;
 }
 
 function pageLayout(page: StoryPage): StoryPageLayout {

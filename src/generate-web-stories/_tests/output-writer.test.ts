@@ -56,6 +56,9 @@ describe('writeGenerationOutput', () => {
     expect(indexHtml).toContain('1 falha');
     expect(indexHtml).toContain('<link rel="icon" href="/assets/shared/publisher-logo.png">');
     expect(indexHtml).toContain('story-card');
+    expect(indexHtml).toContain('grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),360px))');
+    expect(indexHtml).toContain('.story-card{display:grid;gap:var(--space-3);max-width:360px}');
+    expect(indexHtml).toContain('@media(max-width:520px){.story-grid{grid-template-columns:1fr}.story-card{max-width:none}}');
     expect(indexHtml).toContain('https://stories.example.com/assets/ok/poster.jpg');
     expect(indexHtml).toContain('unsupported-video');
     expect(indexHtml).toContain('Missing featured image for source URL');
