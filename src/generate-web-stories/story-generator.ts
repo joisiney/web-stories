@@ -55,7 +55,8 @@ export async function generateOneStory(entry: SitemapEntry, options: GenerateOne
       posterPortraitSrc: story.posterPortraitSrc,
       modifiedAt: story.modifiedAt,
       variant: story.variant,
-      warnings: media.warnings
+      mediaCount: countMedia(story.pages.map((page) => page.media)),
+      warnings: [...media.warnings, ...(preparedAssets.warnings ?? [])]
     };
   } catch (error) {
     throw storyError(error, 'render-failed', 'render');
@@ -96,7 +97,7 @@ function readMedia(metadata: PostMetadata): ReturnType<typeof resolveStoryMedia>
 
 async function readAssets(options: GenerateOneStoryOptions, metadata: PostMetadata, imageUrl: string): Promise<PreparedAssets> {
   try {
-    const input = { slug: metadata.slug, imageUrl, publisher: metadata.publisher, publisherLogoUrl: metadata.publisherLogoUrl };
+    const input = { slug: metadata.slug, imageUrl, imageUrls: metadata.imageUrls ?? [], publisher: metadata.publisher, publisherLogoUrl: metadata.publisherLogoUrl };
     if (options.fetchers?.prepareAssets) {
       return await options.fetchers.prepareAssets(input);
     }
@@ -112,12 +113,20 @@ async function readAssets(options: GenerateOneStoryOptions, metadata: PostMetada
 }
 
 function usePreparedAssets(media: StoryMedia[], assets: PreparedAssets): StoryMedia[] {
+  let imageIndex = 0;
+  const storyImageSrcs = assets.storyImageSrcs ?? [assets.storyImageSrc];
   return media.map((item) => {
     if (item.kind === 'image') {
-      return { ...item, src: assets.storyImageSrc };
+      const src = storyImageSrcs[imageIndex] ?? assets.storyImageSrc;
+      imageIndex += 1;
+      return { ...item, src };
     }
     return { ...item, posterSrc: assets.posterPortraitSrc };
   });
+}
+
+function countMedia(media: StoryMedia[]): number {
+  return new Set(media.map((item) => item.src)).size;
 }
 
 function storyError(error: unknown, code: GenerationFailure['code'], stage: GenerationFailure['stage']): StoryGenerationError {

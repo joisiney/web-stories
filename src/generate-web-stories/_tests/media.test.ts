@@ -43,4 +43,41 @@ describe('AssetPreparer', () => {
     expect([storyImage.width, storyImage.height]).toEqual([720, 1280]);
     expect([logo.width, logo.height]).toEqual([96, 96]);
   });
+
+  it('mantém imagem principal e registra warning quando uma imagem secundária falha', async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), 'assets-multi-'));
+    tempDirs.push(outputDir);
+    const primary = await sharp({ create: { width: 1200, height: 1600, channels: 3, background: '#203040' } }).webp().toBuffer();
+    const secondary = await sharp({ create: { width: 900, height: 1600, channels: 3, background: '#c4170c' } }).webp().toBuffer();
+
+    const assets = await new AssetPreparer({
+      outputDir,
+      publicBaseUrl: 'https://stories.example.com',
+      fetchBinary: async (url) => {
+        if (url.endsWith('falha.webp')) {
+          throw new Error('HTTP 500');
+        }
+        return url.endsWith('terceira.webp') ? secondary : primary;
+      }
+    }).prepare({
+      slug: 'post-a',
+      imageUrl: 'https://cdn.example.com/principal.webp',
+      imageUrls: [
+        'https://cdn.example.com/principal.webp',
+        'https://cdn.example.com/falha.webp',
+        'https://cdn.example.com/terceira.webp'
+      ],
+      publisher: 'Example'
+    } as Parameters<AssetPreparer['prepare']>[0] & { imageUrls: string[] });
+
+    const multiAssets = assets as typeof assets & { storyImageSrcs?: string[]; warnings?: Array<{ code: string }> };
+    expect(multiAssets.storyImageSrcs).toEqual([
+      'https://stories.example.com/assets/post-a/story-image.jpg',
+      'https://stories.example.com/assets/post-a/story-image.jpg',
+      'https://stories.example.com/assets/post-a/story-image-3.jpg'
+    ]);
+    expect(multiAssets.warnings).toEqual([{ code: 'secondary-image-failed', message: 'Imagem secundária ignorada porque não pôde ser baixada ou rasterizada.' }]);
+    expect(await stat(join(outputDir, 'assets', 'post-a', 'story-image.jpg'))).toBeTruthy();
+    expect(await stat(join(outputDir, 'assets', 'post-a', 'story-image-3.jpg'))).toBeTruthy();
+  });
 });

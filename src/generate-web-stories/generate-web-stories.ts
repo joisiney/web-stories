@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { DEFAULT_NETWORK_TIMEOUT_MS, fetchTextWithTimeout } from './network.js';
 import { writeGenerationOutput } from './output.js';
 import { parseSitemapXml, type SitemapEntry } from './sitemap.js';
+import { filterEntriesByUrlPattern } from './source-filter.js';
 import { failureFromStoryError, generateOneStory, type StoryGeneratorFetchers } from './story-generator.js';
 import type { GeneratedStory, GenerationFailure, GenerationReport } from './types.js';
 
@@ -16,6 +17,7 @@ export interface GenerateStoriesOptions {
   networkTimeoutMs?: number;
   publisher?: string;
   publisherLogoUrl?: string;
+  includeUrlPattern?: string;
   fetchers?: StoryGeneratorFetchers;
 }
 
@@ -23,7 +25,8 @@ export async function generateStories(options: GenerateStoriesOptions): Promise<
   const started = Date.now();
   const outputDir = resolve(options.outputDir);
   const allEntries = await readEntries(options);
-  const entries = applyLimit(allEntries, options.limit);
+  const filtered = filterEntriesByUrlPattern(allEntries, options.includeUrlPattern);
+  const entries = applyLimit(filtered.entries, options.limit);
   const stories: GeneratedStory[] = [];
   const failures: GenerationFailure[] = [];
 
@@ -47,7 +50,9 @@ export async function generateStories(options: GenerateStoriesOptions): Promise<
     sitemapUrls: allEntries.length,
     processed: entries.length,
     limit: options.limit,
-    limitApplied: options.limit !== undefined && entries.length < allEntries.length,
+    limitApplied: options.limit !== undefined && entries.length < filtered.entries.length,
+    includeUrlPattern: options.includeUrlPattern,
+    filteredOut: filtered.filteredOut,
     stories,
     failures,
     startedAt: new Date(started).toISOString(),

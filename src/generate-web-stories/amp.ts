@@ -1,6 +1,7 @@
 import { escapeHtml } from './text.js';
+import { ampStoryCss } from './amp-css.js';
 import { renderAmpAttributes, storyMotionForIntent, type AmpMotionAttributes } from './motion.js';
-import type { StoryMedia, StoryModel, StoryPage } from './types.js';
+import type { StoryMedia, StoryModel, StoryPage, StoryPageLayout } from './types.js';
 
 export function renderAmpStoryHtml(story: StoryModel): string {
   const jsonLd = JSON.stringify(createStructuredData(story)).replace(/</g, '\\u003c');
@@ -33,7 +34,7 @@ export function renderAmpStoryHtml(story: StoryModel): string {
   <meta name="amp-story-generator-version" content="0.1.0">
   <script type="application/ld+json">${jsonLd}</script>
   ${ampBoilerplate()}
-  <style amp-custom>${css()}</style>
+  <style amp-custom>${ampStoryCss()}</style>
 </head>
 <body>
   <amp-story standalone
@@ -59,6 +60,7 @@ function renderPage(story: StoryModel, page: StoryPage, index: number): string {
   const cta = index === story.pages.length - 1
     ? `<a class="cta" href="${escapeHtml(story.sourceUrl)}" target="_blank" rel="noopener" ${renderAmpAttributes(motion.cta)}>Ler artigo</a>`
     : '';
+  const layout = pageLayout(page);
 
   return `    <amp-story-page ${pageAttributes}>
       <amp-story-grid-layer template="fill">
@@ -68,12 +70,55 @@ ${renderMedia(story, page, motion.media)}
       <amp-story-grid-layer template="vertical" class="brand">
         <amp-img class="logo" src="${escapeHtml(story.logoSrc)}" width="48" height="48" layout="fixed" alt="${escapeHtml(story.publisher)}"></amp-img>
       </amp-story-grid-layer>
-      <amp-story-grid-layer template="vertical" class="content">
+      <amp-story-grid-layer template="vertical" class="content content--${escapeHtml(layout)}">
         <${titleTag} ${renderAmpAttributes(motion.heading)}>${escapeHtml(page.heading)}</${titleTag}>
-        <p ${renderAmpAttributes(motion.text)}>${escapeHtml(page.text)}</p>
+        ${renderPageText(page, motion.text)}
         ${cta}
       </amp-story-grid-layer>
+${renderDecisionAnimation(page)}
     </amp-story-page>`;
+}
+
+function renderPageText(page: StoryPage, motion: AmpMotionAttributes): string {
+  if (pageLayout(page) !== 'decision') {
+    return `<p ${renderAmpAttributes(motion)}>${escapeHtml(page.text)}</p>`;
+  }
+
+  return `<div class="decision-callout" ${renderAmpAttributes(motion)}>
+          <span class="decision-chip">Ponto de decisão</span>
+          <span id="${escapeHtml(decisionLineId(page))}" class="decision-callout-line"></span>
+          <p>${escapeHtml(page.text)}</p>
+        </div>`;
+}
+
+function renderDecisionAnimation(page: StoryPage): string {
+  if (pageLayout(page) !== 'decision') {
+    return '';
+  }
+
+  const config = JSON.stringify({
+    selector: `#${decisionLineId(page)}`,
+    duration: '650ms',
+    delay: '180ms',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    fill: 'both',
+    keyframes: [
+      { transform: 'scaleX(0)', opacity: 0 },
+      { transform: 'scaleX(1)', opacity: 1 }
+    ]
+  }).replace(/</g, '\\u003c');
+
+  return `      <amp-story-animation layout="nodisplay" trigger="visibility">
+        <script type="application/json">${config}</script>
+      </amp-story-animation>`;
+}
+
+function pageLayout(page: StoryPage): StoryPageLayout {
+  return page.layout ?? (page.id === 'video' ? 'cover' : page.id as StoryPageLayout);
+}
+
+function decisionLineId(page: StoryPage): string {
+  return `decision-callout-line-${page.id.replace(/[^a-z0-9_-]/gi, '-')}`;
 }
 
 function renderMedia(story: StoryModel, page: StoryPage, motion: AmpMotionAttributes): string {
@@ -111,8 +156,4 @@ function hasVideo(story: StoryModel): boolean {
 
 function ampBoilerplate(): string {
   return '<style amp-boilerplate>body{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}</style><noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>';
-}
-
-function css(): string {
-  return `amp-story{font-family:"Avenir Next","Segoe UI",sans-serif;color:#f7f1e8}amp-story-page{background:#101214}.hero-image img{object-fit:cover}.shade{background:linear-gradient(180deg,rgba(16,18,20,.06),rgba(16,18,20,.42) 42%,rgba(16,18,20,.92))}.content{align-content:end;padding:32px 28px 42px}.brand{align-content:start;padding:24px}.logo{border-radius:50%;background:#f7f1e8}h1,h2,p{max-width:100%;margin:0;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;text-shadow:0 2px 18px rgba(0,0,0,.5)}h1,h2{font-family:Georgia,Cambria,serif;font-weight:700}h1{font-size:36px;line-height:1.08}h2{font-size:31px;line-height:1.12}p{max-width:15em;margin-top:16px;font-size:18px;line-height:1.4;font-weight:650}.cta{display:inline-block;max-width:100%;margin-top:24px;padding:12px 18px;border-radius:5px;background:#f7f1e8;color:#101214;font-size:16px;font-weight:800;text-decoration:none;text-shadow:none;overflow-wrap:anywhere;word-break:break-word}`;
 }

@@ -14,6 +14,7 @@
 - A story gerada deve ter 6 páginas para a demo: capa, ponto central, contexto, detalhe prático, decisão e CTA.
 - Páginas narrativas devem usar `auto-advance-after`; o CTA final deve permanecer parado para preservar a ação de clique.
 - Animações devem usar recursos AMP-native: `animate-in`, `animate-in-duration`, `animate-in-delay` e `animate-in-timing-function`.
+- `amp-story-animation` deve ser usado de forma pontual, apenas quando houver ganho narrativo observável e validação AMP correspondente.
 - CSS customizado deve permanecer abaixo de 75 KB e não deve animar propriedades de layout.
 
 ## Padrões Observados Em Produtos De Stories
@@ -28,10 +29,13 @@ As regras implementadas vêm de Google/AMP. Os padrões de produto acima servem 
 
 ## Padrão De Motion
 
-- `cover`: zoom-in longo e discreto na mídia, com título entrando de baixo.
-- `context`: pan-left lento para manter a página viva sem trocar o foco do texto.
+- `cover`: Ken Burns em `zoom-out`, com mídia começando ampliada e título entrando depois.
+- `point`: `pan-right` na imagem, enquanto a headline entra em direção oposta ao movimento principal.
+- `context`: `pan-up` suave para dar sensação de profundidade e continuidade editorial.
+- `detail`: `pan-left` com bloco de texto destacado por linha editorial.
+- `decision`: `zoom-in` controlado e callout com linha animada via `amp-story-animation`.
 - `video`: fade curto para não competir com o movimento do próprio vídeo.
-- `cta`: fade de mídia e CTA com entrada curta, preservando leitura e clique.
+- `cta`: mídia estabilizada e botão com microentrada única, preservando leitura e clique.
 - Páginas de imagem usam `auto-advance-after="7s"`.
 - Páginas de vídeo direto usam `auto-advance-after` apontando para o `id` do `amp-video`, sem `loop`.
 - Coreografia customizada com `amp-story-animation` só deve entrar quando houver ganho narrativo claro e teste AMP correspondente.
@@ -45,7 +49,7 @@ As regras implementadas vêm de Google/AMP. Os padrões de produto acima servem 
 | 3 | Imagem vinda de `og:image` | Gera story quando sitemap e REST não tiverem imagem. |
 | 4 | Vídeo direto com poster | Gera story `video-first` usando `amp-video`. |
 | 5 | Imagem + vídeo direto | Gera story `mixed-media`. |
-| 6 | Múltiplas imagens no sitemap | Usa a primeira imagem como fonte principal. |
+| 6 | Múltiplas imagens no sitemap | Mantém `story-image.jpg` como principal e usa imagens locais secundárias nas páginas narrativas. |
 | 7 | Texto longo | Trunca textos de página e rejeita conteúdo text-heavy. |
 | 8 | Logo SVG | Converte para PNG 1:1. |
 | 9 | Sitemap grande | Processa com concorrência controlada. |
@@ -58,6 +62,14 @@ As regras implementadas vêm de Google/AMP. Os padrões de produto acima servem 
 | 16 | Motion editorial | Gera atributos AMP válidos com easing, delay e duração por intenção narrativa. |
 | 17 | Autoavanço narrativo | Gera `auto-advance-after` nas páginas não finais e mantém CTA final sem autoavanço. |
 | 18 | Sitemap visual | Gera XML rastreável com `xml-stylesheet`, `lastmod` e XSL visual para inspeção no navegador. |
+| 19 | Filtro de URL | Aplica `--include-url-pattern` antes de `--limit` e registra `filteredOut` no relatório. |
+| 20 | Origem Web Story AMP | Extrai imagens de `<amp-story>` em ordem narrativa e gera variante `multi-image-summary` quando houver múltiplas imagens sem vídeo. |
+
+## Feeds Recomendados Para Demo
+
+- Principal: `https://g1.globo.com/sitemap/g1/2025/05/24_1.xml` com `--include-url-pattern "/stories/"`.
+- Alternativo controlado: `https://karnatakahelp.in/web-stories-sitemap.xml`.
+- Alternativo de robustez: `https://www.carehospitals.com/web-stories-sitemap.xml`.
 
 ## Fontes
 
@@ -67,6 +79,7 @@ As regras implementadas vêm de Google/AMP. Os padrões de produto acima servem 
 - AMP story: `https://amp.dev/documentation/components/amp-story/`
 - AMP Web Story technical details: `https://amp.dev/documentation/guides-and-tutorials/learn/webstory_technical_details/`
 - AMP story animations: `https://amp.dev/documentation/examples/visual-effects/amp_story_animations/`
+- AMP story animation: `https://amp.dev/documentation/components/amp-story-animation/`
 - AMP style and layout: `https://amp.dev/documentation/guides-and-tutorials/develop/style_and_layout/`
 - AMP video: `https://amp.dev/documentation/components/amp-video/`
 - Validação AMP: `https://amp.dev/documentation/guides-and-tutorials/learn/validation-workflow/validate_amp/`

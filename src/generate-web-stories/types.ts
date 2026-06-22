@@ -1,6 +1,8 @@
-export type StoryVariant = 'image-summary' | 'video-first' | 'mixed-media' | 'fallback-summary';
+export type StoryVariant = 'image-summary' | 'multi-image-summary' | 'video-first' | 'mixed-media' | 'fallback-summary';
 
-export type StoryMotionIntent = 'cover' | 'context' | 'cta' | 'video';
+export type StoryMotionIntent = 'cover' | 'point' | 'context' | 'detail' | 'decision' | 'cta' | 'video';
+
+export type StoryPageLayout = 'cover' | 'point' | 'context' | 'detail' | 'decision' | 'cta';
 
 export interface StoryQualityIssue {
   code: string;
@@ -17,6 +19,7 @@ export interface StoryPage {
   text: string;
   autoAdvanceAfter?: string;
   motion: StoryMotionIntent;
+  layout?: StoryPageLayout;
   media: StoryMedia;
 }
 
@@ -43,6 +46,7 @@ export interface GeneratedStory {
   posterPortraitSrc: string;
   modifiedAt?: string;
   variant: StoryVariant;
+  mediaCount: number;
   warnings: StoryQualityIssue[];
 }
 
@@ -61,6 +65,8 @@ export interface GenerationReport {
   processed: number;
   limit?: number;
   limitApplied: boolean;
+  includeUrlPattern?: string;
+  filteredOut: number;
   total: number;
   succeeded: number;
   failed: number;

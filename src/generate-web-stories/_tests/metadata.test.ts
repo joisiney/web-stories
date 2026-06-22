@@ -61,5 +61,40 @@ describe('PostMetadataResolver', () => {
     expect(metadata.videoPosterUrl).toBe('https://blog.example.com/video/poster.jpg');
     expect(metadata.publisherLogoUrl).toBe('https://blog.example.com/favicon.png');
   });
-});
 
+  it('extrai imagens em ordem narrativa quando a origem já é uma Web Story AMP', async () => {
+    const resolver = new PostMetadataResolver({
+      fetchJson: async (url) => (url.endsWith('/wp-json') ? { name: 'G1' } : []),
+      fetchText: async () => `
+        <html amp>
+          <head>
+            <title>Story AMP</title>
+            <meta property="og:image" content="https://cdn.example.com/og.webp">
+          </head>
+          <body>
+            <amp-story standalone>
+              <amp-story-page id="story-page-1">
+                <amp-img src="https://cdn.example.com/page-1.webp" width="1200" height="1600" layout="responsive"></amp-img>
+              </amp-story-page>
+              <amp-story-page id="story-page-2">
+                <amp-img src="/page-2.webp" width="1200" height="1600" layout="responsive"></amp-img>
+              </amp-story-page>
+              <amp-story-page id="story-page-3">
+                <amp-img src="https://cdn.example.com/page-1.webp" width="1200" height="1600" layout="responsive"></amp-img>
+              </amp-story-page>
+            </amp-story>
+          </body>
+        </html>`
+    });
+
+    const metadata = await resolver.resolve({ loc: 'https://g1.globo.com/saude/stories/post-a.ghtml', imageUrls: [] });
+    const imageUrls = (metadata as typeof metadata & { imageUrls?: string[] }).imageUrls;
+
+    expect(metadata.imageUrl).toBe('https://cdn.example.com/page-1.webp');
+    expect(imageUrls).toEqual([
+      'https://cdn.example.com/page-1.webp',
+      'https://g1.globo.com/page-2.webp',
+      'https://cdn.example.com/og.webp'
+    ]);
+  });
+});

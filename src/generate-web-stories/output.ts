@@ -11,6 +11,8 @@ export interface WriteGenerationOutputInput {
   processed: number;
   limit?: number;
   limitApplied: boolean;
+  includeUrlPattern?: string;
+  filteredOut?: number;
   stories: GeneratedStory[];
   failures: GenerationFailure[];
   startedAt: string;
@@ -37,6 +39,8 @@ function createReport(input: WriteGenerationOutputInput): GenerationReport {
     processed: input.processed,
     limit: input.limit,
     limitApplied: input.limitApplied,
+    includeUrlPattern: input.includeUrlPattern,
+    filteredOut: input.filteredOut ?? 0,
     total: input.processed,
     succeeded: input.stories.length,
     failed: input.failures.length,

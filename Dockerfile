@@ -18,6 +18,7 @@ ENV NODE_ENV=production \
     OUTPUT_DIR=public \
     PUBLIC_BASE_URL=http://localhost:8080 \
     LIMIT=20 \
+    INCLUDE_URL_PATTERN= \
     CONCURRENCY=6 \
     NETWORK_TIMEOUT_MS=30000 \
     PORT=8080
@@ -31,4 +32,4 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 8080
 
-CMD node dist/cli.js generate --sitemap "$SITEMAP_URL" --out "$OUTPUT_DIR" --base-url "$PUBLIC_BASE_URL" ${LIMIT:+--limit "$LIMIT"} --concurrency "$CONCURRENCY" --network-timeout-ms "$NETWORK_TIMEOUT_MS" ${PUBLISHER:+--publisher "$PUBLISHER"} ${PUBLISHER_LOGO:+--publisher-logo "$PUBLISHER_LOGO"} && node dist/server.js --dir "$OUTPUT_DIR" --port "$PORT"
+CMD node dist/cli.js generate --sitemap "$SITEMAP_URL" --out "$OUTPUT_DIR" --base-url "$PUBLIC_BASE_URL" ${LIMIT:+--limit "$LIMIT"} ${INCLUDE_URL_PATTERN:+--include-url-pattern "$INCLUDE_URL_PATTERN"} --concurrency "$CONCURRENCY" --network-timeout-ms "$NETWORK_TIMEOUT_MS" ${PUBLISHER:+--publisher "$PUBLISHER"} ${PUBLISHER_LOGO:+--publisher-logo "$PUBLISHER_LOGO"} && node dist/server.js --dir "$OUTPUT_DIR" --port "$PORT"

@@ -177,6 +177,50 @@ describe('generateStories', () => {
     expect(indexHtml).toContain('2 processadas de 3 URLs lidas');
   });
 
+  it('filtra URLs por regex antes de aplicar limite e registra URLs descartadas', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-filtered-'));
+    tempDirs.push(outDir);
+    const resolvedUrls: string[] = [];
+
+    const report = await generateStories({
+      sitemapXml: `<?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://blog.example.com/noticia-a/</loc></url>
+          <url><loc>https://blog.example.com/saude/stories/post-a/</loc></url>
+          <url><loc>https://blog.example.com/saude/stories/post-b/</loc></url>
+        </urlset>`,
+      outputDir: outDir,
+      publicBaseUrl: 'https://stories.example.com',
+      limit: 1,
+      includeUrlPattern: '/stories/',
+      fetchers: {
+        resolveMetadata: async (entry) => {
+          resolvedUrls.push(entry.loc);
+          const slug = entry.loc.split('/').filter(Boolean).at(-1) ?? 'post';
+          return {
+            sourceUrl: entry.loc,
+            slug,
+            title: `Post ${slug}`,
+            description: 'Primeira frase. Segunda frase.',
+            imageUrl: `https://cdn.example.com/${slug}.webp`,
+            publisher: 'Example'
+          };
+        },
+        prepareAssets: async ({ slug }) => preparedAssets(slug)
+      }
+    } as Parameters<typeof generateStories>[0] & { includeUrlPattern: string });
+
+    expect(resolvedUrls).toEqual(['https://blog.example.com/saude/stories/post-a/']);
+    const filteredReport = report as typeof report & { filteredOut?: number; includeUrlPattern?: string };
+    expect(filteredReport.sitemapUrls).toBe(3);
+    expect(filteredReport.filteredOut).toBe(1);
+    expect(filteredReport.processed).toBe(1);
+    expect(filteredReport.limitApplied).toBe(true);
+    expect(filteredReport.includeUrlPattern).toBe('/stories/');
+    expect(await readFile(join(outDir, 'reports', 'report.json'), 'utf8')).toContain('"filteredOut": 1');
+    expect(await readFile(join(outDir, 'index.html'), 'utf8')).toContain('1 filtrada por URL');
+  });
+
   it('gera story de vídeo direto quando existe poster mesmo sem imagem de capa', async () => {
     const outDir = await mkdtemp(join(tmpdir(), 'stories-video-'));
     tempDirs.push(outDir);

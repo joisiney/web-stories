@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { DEFAULT_NETWORK_TIMEOUT_MS, fetchJsonWithTimeout, fetchTextWithTimeout } from './network.js';
-import { htmlToText, humanizeSlug, slugFromUrl, toAbsoluteUrl, truncateText } from './text.js';
+import { extractHtmlMetadata, type HtmlMetadata } from './metadata-html.js';
+import { htmlToText, humanizeSlug, slugFromUrl, truncateText } from './text.js';
 import type { SitemapEntry } from './sitemap.js';
 
 export interface PostMetadata {
@@ -9,6 +10,7 @@ export interface PostMetadata {
   title: string;
   description: string;
   imageUrl?: string;
+  imageUrls?: string[];
   videoUrl?: string;
   videoPosterUrl?: string;
   publisher: string;
@@ -22,16 +24,6 @@ export interface PostMetadataResolverDependencies {
   networkTimeoutMs?: number;
   publisher?: string;
   publisherLogoUrl?: string;
-}
-
-interface HtmlMetadata {
-  title?: string;
-  description?: string;
-  imageUrl?: string;
-  videoUrl?: string;
-  videoPosterUrl?: string;
-  siteName?: string;
-  iconUrl?: string;
 }
 
 export class PostMetadataResolver {
@@ -54,13 +46,21 @@ export class PostMetadataResolver {
     const htmlMetadata = await this.readHtmlWhenNeeded(entry.loc, siteMetadata, post);
     const title = post?.title || htmlMetadata.title || humanizeSlug(slug);
     const description = post?.description || htmlMetadata.description || siteMetadata.description || title;
+    const imageUrls = unique([
+      ...entry.imageUrls,
+      ...(post?.imageUrls ?? []),
+      ...htmlMetadata.imageUrls,
+      post?.imageUrl,
+      htmlMetadata.imageUrl
+    ]);
 
     return {
       sourceUrl: entry.loc,
       slug,
       title,
       description: truncateText(description, 280),
-      imageUrl: entry.imageUrls[0] || post?.imageUrl || htmlMetadata.imageUrl,
+      imageUrl: imageUrls[0],
+      imageUrls,
       videoUrl: post?.videoUrl || htmlMetadata.videoUrl,
       videoPosterUrl: post?.videoPosterUrl || htmlMetadata.videoPosterUrl,
       publisher: this.dependencies.publisher || siteMetadata.name || htmlMetadata.siteName || pageUrl.hostname,
@@ -70,8 +70,8 @@ export class PostMetadataResolver {
   }
 
   private async readHtmlWhenNeeded(url: string, site: { name?: string }, post?: HtmlMetadata): Promise<HtmlMetadata> {
-    if (post?.title && post.description && post.imageUrl && site.name) {
-      return {};
+    if (!isProbablyWebStoryUrl(url) && post?.title && post.description && post.imageUrl && site.name) {
+      return { imageUrls: [] };
     }
     return this.readHtmlMetadata(url);
   }
@@ -93,6 +93,7 @@ export class PostMetadataResolver {
       title: htmlToText(readRendered(post.title)) || undefined,
       description: htmlToText(readRendered(post.excerpt)) || truncateText(htmlToText(content), 240) || undefined,
       imageUrl: readEmbeddedImage(post),
+      imageUrls: unique([readEmbeddedImage(post)]),
       videoUrl: readFirstVideoFromHtml(content)
     };
   }
@@ -100,19 +101,10 @@ export class PostMetadataResolver {
   private async readHtmlMetadata(url: string): Promise<HtmlMetadata> {
     const html = await safe(() => this.fetchText(url));
     if (!html) {
-      return {};
+      return { imageUrls: [] };
     }
 
-    const $ = cheerio.load(html);
-    return {
-      title: htmlToText($('title').first().text()) || undefined,
-      description: firstAttr($, ['meta[name="description"]', 'meta[property="og:description"]'], 'content') || undefined,
-      imageUrl: toAbsoluteUrl(firstAttr($, ['meta[property="og:image"]'], 'content'), url),
-      videoUrl: toAbsoluteUrl(firstAttr($, ['meta[property="og:video"]', 'meta[property="og:video:url"]'], 'content'), url),
-      videoPosterUrl: toAbsoluteUrl(firstAttr($, ['meta[property="og:video:image"]'], 'content'), url),
-      siteName: firstAttr($, ['meta[property="og:site_name"]'], 'content') || undefined,
-      iconUrl: toAbsoluteUrl(firstAttr($, ['link[rel="apple-touch-icon"]', 'link[rel="icon"]', 'link[rel="shortcut icon"]'], 'href'), url)
-    };
+    return extractHtmlMetadata(html, url);
   }
 }
 
@@ -130,16 +122,6 @@ function readEmbeddedImage(post: Record<string, unknown>): string | undefined {
 function readFirstVideoFromHtml(html: string): string | undefined {
   const $ = cheerio.load(html);
   return $('video source, video').first().attr('src');
-}
-
-function firstAttr($: cheerio.CheerioAPI, selectors: string[], attr: string): string {
-  for (const selector of selectors) {
-    const value = $(selector).first().attr(attr);
-    if (value) {
-      return value;
-    }
-  }
-  return '';
 }
 
 async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
@@ -164,4 +146,16 @@ function text(value: unknown): string | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function unique(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.length > 0))];
+}
+
+function isProbablyWebStoryUrl(url: string): boolean {
+  try {
+    return /\/(stories|web-stories|webstories)\//i.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
 }

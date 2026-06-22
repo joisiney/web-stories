@@ -4,6 +4,7 @@ import type { GeneratedStory, GenerationFailure, GenerationReport } from './type
 export function renderIndexHtml(report: GenerationReport): string {
   const runLabel = report.limit !== undefined ? 'Amostra de validação' : 'Lote completo';
   const processedLabel = `${report.processed} processadas de ${report.sitemapUrls} URLs lidas`;
+  const filterLabel = report.filteredOut > 0 ? ` ${plural(report.filteredOut, 'filtrada por URL', 'filtradas por URL')}.` : '';
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -19,7 +20,7 @@ export function renderIndexHtml(report: GenerationReport): string {
       <div class="masthead-copy">
         <p class="eyebrow">WordPress Sitemap para Web Stories AMP</p>
         <h1>Galeria técnica de Web Stories geradas</h1>
-        <p class="lead">${escapeHtml(processedLabel)} em ${escapeHtml(formatDuration(report.durationMs))}. Saída atualizada em ${escapeHtml(formatDate(report.finishedAt))}.</p>
+        <p class="lead">${escapeHtml(processedLabel)} em ${escapeHtml(formatDuration(report.durationMs))}.${escapeHtml(filterLabel)} Saída atualizada em ${escapeHtml(formatDate(report.finishedAt))}.</p>
       </div>
       <div class="run-state">
         <span>${escapeHtml(runLabel)}</span>
@@ -77,6 +78,7 @@ function renderStoryGallery(stories: GeneratedStory[]): string {
 function renderStoryCard(story: GeneratedStory): string {
   const path = new URL(story.storyUrl).pathname;
   const warnings = story.warnings.map((warning) => warning.code).join(', ') || 'Sem warnings';
+  const media = plural(story.mediaCount, 'mídia', 'mídias');
   const modified = story.modifiedAt ? formatDate(story.modifiedAt) : 'Sem lastmod';
   return `<article class="story-card">
     <a class="story-link" href="${escapeHtml(path)}" aria-label="Abrir story: ${escapeHtml(story.title)}">
@@ -84,7 +86,7 @@ function renderStoryCard(story: GeneratedStory): string {
       <span class="story-overlay">
         <span class="story-kicker">${escapeHtml(story.variant)}</span>
         <strong>${escapeHtml(story.title)}</strong>
-        <span class="story-meta">${escapeHtml(modified)} · ${escapeHtml(warnings)}</span>
+        <span class="story-meta">${escapeHtml(modified)} · ${escapeHtml(media)} · ${escapeHtml(warnings)}</span>
       </span>
     </a>
     <a class="source-link" href="${escapeHtml(story.sourceUrl)}">Post original</a>

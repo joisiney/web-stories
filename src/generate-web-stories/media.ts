@@ -3,16 +3,20 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { DEFAULT_NETWORK_TIMEOUT_MS, fetchBinaryWithTimeout } from './network.js';
 import { escapeHtml, sanitizeSlug, toPublicUrl } from './text.js';
+import type { StoryQualityIssue } from './types.js';
 
 export interface PreparedAssets {
   logoSrc: string;
   posterPortraitSrc: string;
   storyImageSrc: string;
+  storyImageSrcs?: string[];
+  warnings?: StoryQualityIssue[];
 }
 
 export interface PrepareAssetInput {
   slug: string;
   imageUrl: string;
+  imageUrls?: string[];
   publisher: string;
   publisherLogoUrl?: string;
 }
@@ -45,6 +49,7 @@ export class AssetPreparer {
     const posterRelativePath = `assets/${safeSlug}/poster-portrait.jpg`;
     const storyImageRelativePath = `assets/${safeSlug}/story-image.jpg`;
     await mkdir(join(this.options.outputDir, 'assets', safeSlug), { recursive: true });
+    const imageUrls = unique([input.imageUrl, ...(input.imageUrls ?? [])]);
     const imageBuffer = await this.fetchBinary(input.imageUrl);
 
     await Promise.all([
@@ -58,11 +63,41 @@ export class AssetPreparer {
         .toFile(join(this.options.outputDir, storyImageRelativePath))
     ]);
 
+    const primaryStoryImageSrc = toPublicUrl(this.options.publicBaseUrl, storyImageRelativePath);
+    const secondary = await this.writeSecondaryImages(safeSlug, imageUrls.slice(1), primaryStoryImageSrc);
+
     return {
       posterPortraitSrc: toPublicUrl(this.options.publicBaseUrl, posterRelativePath),
-      storyImageSrc: toPublicUrl(this.options.publicBaseUrl, storyImageRelativePath),
+      storyImageSrc: primaryStoryImageSrc,
+      storyImageSrcs: [primaryStoryImageSrc, ...secondary.srcs],
+      warnings: secondary.warnings,
       logoSrc: await this.ensureLogo(input.publisher, input.publisherLogoUrl)
     };
+  }
+
+  private async writeSecondaryImages(safeSlug: string, imageUrls: string[], fallbackSrc: string): Promise<{ srcs: string[]; warnings: StoryQualityIssue[] }> {
+    const srcs: string[] = [];
+    const warnings: StoryQualityIssue[] = [];
+
+    for (const [index, imageUrl] of imageUrls.entries()) {
+      const position = index + 2;
+      const relativePath = `assets/${safeSlug}/story-image-${position}.jpg`;
+      try {
+        await sharp(await this.fetchBinary(imageUrl))
+          .resize(STORY_IMAGE_WIDTH, STORY_IMAGE_HEIGHT, { fit: 'cover', position: 'center' })
+          .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+          .toFile(join(this.options.outputDir, relativePath));
+        srcs.push(toPublicUrl(this.options.publicBaseUrl, relativePath));
+      } catch {
+        srcs.push(fallbackSrc);
+        warnings.push({
+          code: 'secondary-image-failed',
+          message: 'Imagem secundária ignorada porque não pôde ser baixada ou rasterizada.'
+        });
+      }
+    }
+
+    return { srcs, warnings };
   }
 
   private ensureLogo(publisher: string, publisherLogoUrl?: string): Promise<string> {
@@ -107,4 +142,8 @@ function fallbackLogo(publisher: string): Buffer {
     <circle cx="48" cy="48" r="34" fill="#111111"/>
     <text x="48" y="58" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#ffffff">${escapeHtml(initials)}</text>
   </svg>`);
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
 }

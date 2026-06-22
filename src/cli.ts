@@ -29,6 +29,8 @@ Options:
   --out <dir>              Output directory (default: public)
   --base-url <url>         Public base URL used in canonical/assets (default: http://localhost:8080)
   --limit <number>         Process only the first N sitemap entries
+  --include-url-pattern <regex>
+                           Process only sitemap URLs matching this regex, before --limit
   --concurrency <number>   Concurrent item workers (default: 6)
   --network-timeout-ms <n> Network timeout per request in milliseconds (default: 30000)
   --publisher <name>       Override publisher name

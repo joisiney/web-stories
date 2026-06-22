@@ -1,16 +1,22 @@
 import type { GenerateStoriesOptions } from './generate-web-stories.js';
+import { compileIncludeUrlPattern } from './source-filter.js';
 
 export type GenerateCliOptions = Pick<
   GenerateStoriesOptions,
   'sitemapUrl' | 'outputDir' | 'publicBaseUrl' | 'limit' | 'concurrency' | 'publisher' | 'publisherLogoUrl'
-  | 'networkTimeoutMs'
+  | 'networkTimeoutMs' | 'includeUrlPattern'
 >;
 
 export function parseGenerateCliArgs(args: string[]): GenerateCliOptions {
   const values = readFlags(args);
   const sitemapUrl = values.get('sitemap');
+  const includeUrlPattern = values.get('include-url-pattern');
   if (!sitemapUrl) {
     throw new Error('Missing required --sitemap option');
+  }
+
+  if (includeUrlPattern) {
+    compileIncludeUrlPattern(includeUrlPattern);
   }
 
   return {
@@ -20,6 +26,7 @@ export function parseGenerateCliArgs(args: string[]): GenerateCliOptions {
     limit: parseOptionalPositiveInt(values.get('limit'), 'limit'),
     concurrency: parseOptionalPositiveInt(values.get('concurrency'), 'concurrency') ?? 6,
     networkTimeoutMs: parseOptionalPositiveInt(values.get('network-timeout-ms'), 'network-timeout-ms'),
+    includeUrlPattern,
     publisher: values.get('publisher'),
     publisherLogoUrl: values.get('publisher-logo')
   };

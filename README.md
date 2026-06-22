@@ -10,13 +10,13 @@ Saída: uma Web Story AMP por post, assets locais rasterizados, índice operacio
 
 - Lê XML de sitemap com suporte ao namespace `image`.
 - Enriquece metadados por WordPress REST e usa HTML remoto como fallback.
-- Usa a imagem principal do sitemap, REST ou `og:image`.
+- Usa imagens do sitemap, REST ou HTML; quando a origem já é uma Web Story AMP, extrai múltiplas imagens em ordem narrativa.
 - Aceita vídeo apenas quando for URL direta `mp4` ou `webm` com poster.
-- Gera AMP com `amp-story`, `amp-img` e `amp-video` quando aplicável.
+- Gera AMP com `amp-story`, `amp-img`, `amp-video` quando aplicável e um `amp-story-animation` controlado no callout editorial.
 - Inclui canonical, metadados AMP obrigatórios, OGP, Twitter Card e JSON-LD.
-- Rasteriza localmente imagem vertical, poster 3:4 e logo 1:1 com `sharp`.
+- Rasteriza localmente imagem vertical, imagens secundárias, poster 3:4 e logo 1:1 com `sharp`.
 - Compõe 6 páginas por story: capa, ponto central, contexto, detalhe, decisão e CTA.
-- Aplica animação AMP-native moderada e autoavanço nas páginas narrativas.
+- Aplica motion editorial AMP-native: Ken Burns na capa, pans por contexto, texto sequenciado e callout de decisão.
 - Mantém o CTA final sem autoavanço para preservar o clique no artigo original.
 - Gera sitemap XML das stories com `xml-stylesheet`, `lastmod` e XSL visual.
 - Mantém falhas por item no relatório sem interromper o lote.
@@ -39,6 +39,17 @@ Acesse `http://localhost:8080` após o `serve`.
 
 Para um smoke test rápido, use `--limit 3`. Para avaliação visual e técnica, prefira `--limit 20`, pois a raiz exibe uma galeria de Web Stories e o sitemap das stories fica mais representativo.
 
+Para a demo editorial com fonte mais rica em Web Stories, use o sitemap do G1 filtrando URLs que já são stories. O filtro é aplicado antes de `--limit`, então a amostra não é consumida por notícias comuns:
+
+```bash
+pnpm generate --sitemap https://g1.globo.com/sitemap/g1/2025/05/24_1.xml --include-url-pattern "/stories/" --out public --base-url http://localhost:8080 --limit 2
+```
+
+Feeds alternativos úteis para validação visual:
+
+- `https://karnatakahelp.in/web-stories-sitemap.xml`: menor e direto, bom para smoke test controlado.
+- `https://www.carehospitals.com/web-stories-sitemap.xml`: mais volume e markup menos regular, bom para validar fallback por `og:image`.
+
 Para processar o sitemap completo, remova `--limit`:
 
 ```bash
@@ -59,6 +70,7 @@ Variáveis suportadas:
 SITEMAP_URL=https://blog.jota.ai/post-sitemap.xml
 PUBLIC_BASE_URL=http://localhost:8080
 LIMIT=20
+INCLUDE_URL_PATTERN=
 CONCURRENCY=6
 NETWORK_TIMEOUT_MS=30000
 PORT=8080
@@ -73,13 +85,15 @@ A fonte de verdade do produto fica em `src/generate-web-stories`, em uma vertica
 Principais módulos:
 
 - `sitemap.ts`: valida e transforma XML em entradas de post.
-- `metadata.ts`: resolve título, descrição, publisher, imagem e vídeo por REST/HTML.
+- `metadata.ts`: resolve título, descrição, publisher, imagens e vídeo por REST/HTML.
+- `metadata-html.ts`: extrai metadados HTML e imagens narrativas de páginas com `<amp-story>`.
 - `story.ts`: aplica regras de mídia, texto curto e composição das páginas.
 - `motion.ts`: centraliza presets de animação AMP por intenção narrativa.
 - `media.ts`: baixa e rasteriza assets locais.
 - `story-generator.ts`: gera uma story individual e classifica falhas do item.
 - `generate-web-stories.ts`: orquestra lote, limite, concorrência, limpeza e relatório.
 - `amp.ts`: renderiza HTML AMP sem buscar rede.
+- `amp-css.ts`: concentra CSS AMP customizado dentro do orçamento permitido.
 - `output.ts`: escreve índice, sitemap, XSL, `robots.txt` e relatórios.
 - `output-index.ts`: renderiza a galeria operacional da raiz.
 - `output-sitemap.ts`: renderiza `sitemap.xml` e `sitemap.xsl`.
@@ -92,6 +106,7 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
 - `public/stories/<slug>/index.html`: Web Story AMP.
 - `public/assets/<slug>/poster-portrait.jpg`: poster 3:4.
 - `public/assets/<slug>/story-image.jpg`: imagem vertical 9:16.
+- `public/assets/<slug>/story-image-2.jpg`, `story-image-3.jpg` etc.: imagens secundárias 9:16 quando disponíveis.
 - `public/assets/shared/publisher-logo.png`: logo raster 1:1.
 - `public/index.html`: galeria operacional com métricas, cards e links técnicos.
 - `public/sitemap.xml`: sitemap XML das Web Stories com stylesheet XSL.
@@ -105,9 +120,14 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
 ```json
 {
   "sitemapUrls": 3,
-  "processed": 3,
+  "processed": 2,
+  "limit": 2,
+  "limitApplied": false,
+  "includeUrlPattern": "/stories/",
+  "filteredOut": 1,
+  "total": 2,
   "succeeded": 2,
-  "failed": 1,
+  "failed": 0,
   "stories": [
     {
       "sourceUrl": "https://blog.example.com/post/",
@@ -115,18 +135,12 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
       "title": "Título",
       "posterPortraitSrc": "http://localhost:8080/assets/post/poster-portrait.jpg",
       "modifiedAt": "2026-06-22T05:09:25-03:00",
-      "variant": "image-summary",
+      "variant": "multi-image-summary",
+      "mediaCount": 3,
       "warnings": []
     }
   ],
-  "failures": [
-    {
-      "url": "https://blog.example.com/falha/",
-      "code": "asset-failed",
-      "stage": "assets",
-      "reason": "GET https://cdn.example.com/image.webp failed with HTTP 500"
-    }
-  ]
+  "failures": []
 }
 ```
 
@@ -152,6 +166,8 @@ Códigos de falha por item:
 - Retry/backoff fica na fronteira de rede, sem contaminar renderers ou resolvers.
 - Testes validam comportamento público observável, não ordem interna de chamadas.
 - Sitemap inválido aborta a execução; falhas de posts individuais entram no relatório.
+- `--include-url-pattern` filtra o sitemap antes de `--limit` e registra `filteredOut` no relatório para manter rastreabilidade.
+- `amp-story-animation` é usado só no callout da página de decisão, com `transform` e `opacity`, porque o restante do motion é resolvido por presets AMP-native mais previsíveis.
 - A raiz (`/`) é uma galeria de avaliação; `/sitemap.xml` é o sitemap XML rastreável e visualmente estilizado via XSL.
 
 ## Documentação Técnica Consultada
@@ -160,6 +176,8 @@ Códigos de falha por item:
 - Boas práticas de Web Stories: `https://developers.google.com/search/docs/appearance/web-stories-creation-best-practices`
 - AMP Web Story technical details: `https://amp.dev/documentation/guides-and-tutorials/learn/webstory_technical_details/`
 - AMP story: `https://amp.dev/documentation/components/amp-story/`
+- AMP story animations: `https://amp.dev/documentation/examples/visual-effects/amp_story_animations/`
+- AMP story animation: `https://amp.dev/documentation/components/amp-story-animation/`
 - AMP video: `https://amp.dev/documentation/components/amp-video/`
 - Validação AMP: `https://amp.dev/documentation/guides-and-tutorials/learn/validation-workflow/validate_amp/`
 - Sitemaps: `https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap`

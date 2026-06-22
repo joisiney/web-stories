@@ -9,26 +9,30 @@ A slice concentra o produto inteiro do desafio: ler sitemap WordPress, resolver 
 ```mermaid
 flowchart LR
   A["sitemap XML"] --> B["sitemap"]
-  B --> C["metadata"]
-  C --> D["story media"]
-  D --> E["media assets"]
-  E --> F["story generator"]
-  F --> G["story model"]
-  G --> H["motion presets"]
-  H --> I["AMP renderer"]
-  I --> J["output"]
-  J --> K["index gallery + sitemap XSL"]
+  B --> C["URL filter"]
+  C --> D["metadata"]
+  D --> E["story media"]
+  E --> F["media assets"]
+  F --> G["story generator"]
+  G --> H["story model"]
+  H --> I["motion presets"]
+  I --> J["AMP renderer"]
+  J --> K["output"]
+  K --> L["index gallery + sitemap XSL"]
 ```
 
 ## Módulos
 
 - `sitemap.ts`: transforma XML em entradas de post.
-- `metadata.ts`: resolve título, descrição, publisher, imagem e vídeo por REST/HTML.
+- `source-filter.ts`: aplica filtro opcional de URL após o sitemap e antes do limite.
+- `metadata.ts`: resolve título, descrição, publisher, imagens e vídeo por REST/HTML.
+- `metadata-html.ts`: extrai metadados HTML e múltiplas imagens quando a origem já é uma Web Story AMP.
 - `story.ts`: aplica regras de variante, texto curto, fallback de vídeo e composição das 6 páginas.
 - `motion.ts`: centraliza intenções narrativas, timings e atributos AMP de animação.
-- `media.ts`: rasteriza poster e logo.
+- `media.ts`: rasteriza poster, imagens locais e logo.
 - `story-generator.ts`: gera uma story individual e classifica falhas por estágio.
 - `amp.ts`: renderiza AMP HTML.
+- `amp-css.ts`: centraliza CSS AMP customizado do renderer.
 - `network.ts`: centraliza `fetch` com timeout, retry e backoff.
 - `output.ts`: escreve índice operacional, sitemap, XSL, `robots.txt` e relatórios.
 - `output-index.ts`: renderiza a galeria operacional da raiz.
@@ -43,7 +47,7 @@ flowchart LR
 - Renderização não busca rede.
 - Renderização aplica atributos AMP já decididos por `motion.ts`; não decide coreografia.
 - Resolução de metadados não escreve arquivos.
-- Orquestração de lote não conhece detalhes de HTML, assets ou classificação interna do item.
+- Orquestração de lote conhece apenas filtro, limite, concorrência e relatório; não conhece detalhes de HTML, assets ou classificação interna do item.
 
 ## Profundidade Da Slice
 
@@ -60,4 +64,4 @@ flowchart LR
 - SOLID pragmático: responsabilidades são separadas por comportamento real, não por camadas abstratas.
 - Vertical slice: regras, IO e testes do fluxo ficam próximos.
 - Testabilidade: dependências externas são injetáveis apenas nas fronteiras que precisam de teste confiável.
-- Motion editorial: animações são AMP-native, tipadas por intenção de página e limitadas a entrada de mídia/texto.
+- Motion editorial: animações são AMP-native, tipadas por intenção de página e usam `amp-story-animation` apenas no callout de decisão.

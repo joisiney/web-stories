@@ -102,4 +102,33 @@ describe('generate-web-stories story variants', () => {
     expect(story.pages.every((page) => page.text.length > 0)).toBe(true);
     expect(story.pages[5]?.autoAdvanceAfter).toBeUndefined();
   });
+
+  it('usa múltiplas imagens em páginas diferentes sem alterar o contrato de 6 páginas', () => {
+    const story = composeStory({
+      sourceUrl: 'https://blog.example.com/stories/post/',
+      slug: 'post',
+      title: 'Post com galeria',
+      description: 'Abertura. Ponto principal. Contexto. Detalhe. Decisão.',
+      publisher: 'Example',
+      logoSrc: 'https://stories.example.com/assets/logo.png',
+      posterPortraitSrc: 'https://stories.example.com/assets/poster.jpg',
+      publicBaseUrl: 'https://stories.example.com',
+      media: [
+        { kind: 'image', src: 'https://stories.example.com/assets/post/story-image.jpg' },
+        { kind: 'image', src: 'https://stories.example.com/assets/post/story-image-2.jpg' },
+        { kind: 'image', src: 'https://stories.example.com/assets/post/story-image-3.jpg' }
+      ]
+    });
+
+    const editorialStory = story as typeof story & { pages: Array<typeof story.pages[number] & { layout?: string; motion: string }> };
+    expect(editorialStory.variant).toBe('multi-image-summary');
+    expect(editorialStory.pages).toHaveLength(6);
+    expect(editorialStory.pages.map((page) => page.id)).toEqual(['cover', 'point', 'context', 'detail', 'decision', 'cta']);
+    expect(editorialStory.pages.map((page) => page.layout)).toEqual(['cover', 'point', 'context', 'detail', 'decision', 'cta']);
+    expect(new Set(editorialStory.pages.slice(0, 4).map((page) => page.media.kind === 'image' ? page.media.src : 'video')).size).toBeGreaterThan(1);
+    expect(editorialStory.pages[1]?.motion).toBe('point');
+    expect(editorialStory.pages[3]?.motion).toBe('detail');
+    expect(editorialStory.pages[4]?.motion).toBe('decision');
+    expect(editorialStory.pages[5]?.autoAdvanceAfter).toBeUndefined();
+  });
 });

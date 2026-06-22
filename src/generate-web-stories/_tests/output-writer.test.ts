@@ -22,6 +22,8 @@ describe('writeGenerationOutput', () => {
       processed: 2,
       limit: 2,
       limitApplied: true,
+      includeUrlPattern: '/stories/',
+      filteredOut: 1,
       stories: [
         {
           sourceUrl: 'https://blog.example.com/ok/',
@@ -31,6 +33,7 @@ describe('writeGenerationOutput', () => {
           posterPortraitSrc: 'https://stories.example.com/assets/ok/poster.jpg',
           modifiedAt: '2026-06-20T00:00:00.000Z',
           variant: 'image-summary',
+          mediaCount: 1,
           warnings: [{ code: 'unsupported-video', message: 'Vídeo ignorado porque não é direto.' }]
         }
       ],
@@ -48,6 +51,7 @@ describe('writeGenerationOutput', () => {
     const indexHtml = await readFile(join(outputDir, 'index.html'), 'utf8');
     expect(indexHtml).toContain('Amostra de validação');
     expect(indexHtml).toContain('2 processadas de 3 URLs lidas');
+    expect(indexHtml).toContain('1 filtrada por URL');
     expect(indexHtml).toContain('1 sucesso');
     expect(indexHtml).toContain('1 falha');
     expect(indexHtml).toContain('<link rel="icon" href="/assets/shared/publisher-logo.png">');
@@ -76,7 +80,10 @@ describe('writeGenerationOutput', () => {
     expect(failuresCsv).toContain('Missing featured image');
     const reportJson = await readFile(join(outputDir, 'reports', 'report.json'), 'utf8');
     expect(reportJson).toContain('"variant": "image-summary"');
+    expect(reportJson).toContain('"mediaCount": 1');
     expect(reportJson).toContain('"sitemapUrls": 3');
+    expect(reportJson).toContain('"filteredOut": 1');
+    expect(reportJson).toContain('"includeUrlPattern": "/stories/"');
     expect(reportJson).toContain('"limitApplied": true');
     expect(reportJson).toContain('"code": "missing-supported-media"');
     expect(reportJson).toContain('"stage": "media"');

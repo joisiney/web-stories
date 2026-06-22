@@ -1,7 +1,7 @@
 import type { StoryMotionIntent } from './types.js';
 
 export interface AmpMotionAttributes {
-  animateIn: 'fade-in' | 'fly-in-bottom' | 'pan-left' | 'zoom-in';
+  animateIn: 'fade-in' | 'fly-in-bottom' | 'pan-left' | 'pan-right' | 'pan-up' | 'zoom-in' | 'zoom-out';
   duration: string;
   delay?: string;
   timingFunction: string;
@@ -45,20 +45,73 @@ const EDITORIAL_COPY_MOTION = {
 const STORY_MOTION_PRESETS = {
   cover: {
     media: {
-      animateIn: 'zoom-in',
+      animateIn: 'zoom-out',
       duration: '7s',
       timingFunction: EASE_OUT_QUINT,
-      scaleStart: '1',
-      scaleEnd: '1.08'
+      scaleStart: '1.1',
+      scaleEnd: '1'
+    },
+    heading: {
+      ...EDITORIAL_COPY_MOTION.heading,
+      delay: '.35s'
+    },
+    text: {
+      ...EDITORIAL_COPY_MOTION.text,
+      delay: '.55s'
+    },
+    cta: {
+      animateIn: 'zoom-in',
+      duration: '.38s',
+      delay: '.35s',
+      timingFunction: EASE_OUT_EXPO,
+      scaleStart: '.96',
+      scaleEnd: '1'
+    }
+  },
+  point: {
+    media: {
+      animateIn: 'pan-right',
+      duration: '7s',
+      timingFunction: EASE_OUT_QUART,
+      panScalingFactor: '1.12'
     },
     ...EDITORIAL_COPY_MOTION
   },
   context: {
     media: {
+      animateIn: 'pan-up',
+      duration: '7s',
+      timingFunction: EASE_OUT_QUART,
+      panScalingFactor: '1.1'
+    },
+    ...EDITORIAL_COPY_MOTION
+  },
+  detail: {
+    media: {
       animateIn: 'pan-left',
       duration: '7s',
       timingFunction: EASE_OUT_QUART,
-      panScalingFactor: '1.08'
+      panScalingFactor: '1.1'
+    },
+    heading: {
+      ...EDITORIAL_COPY_MOTION.heading,
+      animateIn: 'fade-in',
+      delay: '.18s'
+    },
+    text: {
+      ...EDITORIAL_COPY_MOTION.text,
+      animateIn: 'fly-in-bottom',
+      delay: '.34s'
+    },
+    cta: EDITORIAL_COPY_MOTION.cta
+  },
+  decision: {
+    media: {
+      animateIn: 'zoom-in',
+      duration: '7s',
+      timingFunction: EASE_OUT_QUINT,
+      scaleStart: '1',
+      scaleEnd: '1.06'
     },
     ...EDITORIAL_COPY_MOTION
   },

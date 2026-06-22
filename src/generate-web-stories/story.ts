@@ -3,6 +3,7 @@ import type { StoryMedia, StoryModel, StoryQualityIssue, StoryVariant } from './
 
 export interface ResolveStoryMediaInput {
   imageUrl?: string;
+  imageUrls?: string[];
   videoUrl?: string;
   videoPosterUrl?: string;
 }
@@ -41,8 +42,8 @@ export function resolveStoryMedia(input: ResolveStoryMediaInput): { media: Story
     });
   }
 
-  if (input.imageUrl) {
-    media.push({ kind: 'image', src: input.imageUrl });
+  for (const imageUrl of unique([...(input.imageUrls ?? []), input.imageUrl])) {
+    media.push({ kind: 'image', src: imageUrl });
   }
 
   return { media, warnings };
@@ -75,28 +76,29 @@ export function composeStory(input: ComposeStoryInput): StoryModel {
 }
 
 function createPages(title: string, description: string, media: StoryMedia[], heroImage: string): StoryModel['pages'] {
-  const imageMedia = media.find((item) => item.kind === 'image') ?? { kind: 'image' as const, src: heroImage };
+  const imageMedia = media.filter((item) => item.kind === 'image');
+  const fallbackImage = imageMedia[0] ?? { kind: 'image' as const, src: heroImage };
   const videoMedia = media.find((item) => item.kind === 'video');
   const copy = storyCopy(title, description);
   const narrativePages = [
-    { id: 'cover', heading: title, text: copy.coverText, motion: 'cover' as const, media: imageMedia },
-    { id: 'point', heading: 'Ponto central', text: copy.pointText, motion: 'context' as const, media: imageMedia },
-    { id: 'context', heading: 'Contexto', text: copy.contextText, motion: 'context' as const, media: imageMedia },
-    { id: 'detail', heading: 'Na prática', text: copy.detailText, motion: 'context' as const, media: imageMedia },
-    { id: 'decision', heading: 'Antes de decidir', text: copy.decisionText, motion: 'context' as const, media: imageMedia }
+    { id: 'cover', layout: 'cover' as const, heading: title, text: copy.coverText, motion: 'cover' as const, media: imageForPage(imageMedia, 0, fallbackImage) },
+    { id: 'point', layout: 'point' as const, heading: 'Ponto central', text: copy.pointText, motion: 'point' as const, media: imageForPage(imageMedia, 1, fallbackImage) },
+    { id: 'context', layout: 'context' as const, heading: 'Contexto', text: copy.contextText, motion: 'context' as const, media: imageForPage(imageMedia, 2, fallbackImage) },
+    { id: 'detail', layout: 'detail' as const, heading: 'Na prática', text: copy.detailText, motion: 'detail' as const, media: imageForPage(imageMedia, 3, fallbackImage) },
+    { id: 'decision', layout: 'decision' as const, heading: 'Antes de decidir', text: copy.decisionText, motion: 'decision' as const, media: imageForPage(imageMedia, 4, fallbackImage) }
   ].map((page) => ({ ...page, autoAdvanceAfter: IMAGE_AUTO_ADVANCE }));
 
   if (videoMedia) {
     return [
-      { id: 'video', heading: title, text: copy.coverText, autoAdvanceAfter: VIDEO_AUTO_ADVANCE_ID, motion: 'video', media: videoMedia },
+      { id: 'video', layout: 'cover' as const, heading: title, text: copy.coverText, autoAdvanceAfter: VIDEO_AUTO_ADVANCE_ID, motion: 'video' as const, media: videoMedia },
       ...narrativePages.slice(1),
-      { id: 'cta', heading: 'Continue lendo', text: copy.ctaText, motion: 'cta', media: imageMedia }
+      { id: 'cta', layout: 'cta' as const, heading: 'Continue lendo', text: copy.ctaText, motion: 'cta' as const, media: fallbackImage }
     ];
   }
 
   return [
     ...narrativePages,
-    { id: 'cta', heading: 'Continue lendo', text: copy.ctaText, motion: 'cta', media: imageMedia }
+    { id: 'cta', layout: 'cta' as const, heading: 'Continue lendo', text: copy.ctaText, motion: 'cta' as const, media: fallbackImage }
   ];
 }
 
@@ -123,7 +125,8 @@ function storyCopy(title: string, description: string): {
 }
 
 function selectVariant(media: StoryMedia[]): StoryVariant {
-  const hasImage = media.some((item) => item.kind === 'image');
+  const imageCount = media.filter((item) => item.kind === 'image').length;
+  const hasImage = imageCount > 0;
   const hasVideo = media.some((item) => item.kind === 'video');
   if (hasImage && hasVideo) {
     return 'mixed-media';
@@ -131,7 +134,18 @@ function selectVariant(media: StoryMedia[]): StoryVariant {
   if (hasVideo) {
     return 'video-first';
   }
+  if (imageCount > 1) {
+    return 'multi-image-summary';
+  }
   return hasImage ? 'image-summary' : 'fallback-summary';
+}
+
+function imageForPage(images: StoryMedia[], index: number, fallback: StoryMedia): StoryMedia {
+  return images[index % Math.max(images.length, 1)] ?? fallback;
+}
+
+function unique(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.length > 0))];
 }
 
 function directVideo(videoUrl?: string, posterUrl?: string): StoryMedia | undefined {
