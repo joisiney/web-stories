@@ -32,7 +32,12 @@ describe('writeGenerationOutput', () => {
           warnings: [{ code: 'unsupported-video', message: 'Vídeo ignorado porque não é direto.' }]
         }
       ],
-      failures: [{ url: 'https://blog.example.com/falha/', reason: 'Missing featured image for source URL' }],
+      failures: [{
+        url: 'https://blog.example.com/falha/',
+        code: 'missing-supported-media',
+        stage: 'media',
+        reason: 'Missing featured image for source URL'
+      }],
       startedAt: '2026-06-20T00:00:00.000Z',
       finishedAt: '2026-06-20T00:00:01.000Z',
       durationMs: 1000
@@ -51,10 +56,16 @@ describe('writeGenerationOutput', () => {
     expect(indexHtml).toContain('href="/reports/failures.csv"');
     expect(await readFile(join(outputDir, 'sitemap.xml'), 'utf8')).toContain('<loc>https://stories.example.com/stories/ok/</loc>');
     expect(await readFile(join(outputDir, 'robots.txt'), 'utf8')).toContain('Sitemap: https://stories.example.com/sitemap.xml');
-    expect(await readFile(join(outputDir, 'reports', 'failures.csv'), 'utf8')).toContain('Missing featured image');
+    const failuresCsv = await readFile(join(outputDir, 'reports', 'failures.csv'), 'utf8');
+    expect(failuresCsv).toContain('url,code,stage,reason');
+    expect(failuresCsv).toContain('missing-supported-media');
+    expect(failuresCsv).toContain('media');
+    expect(failuresCsv).toContain('Missing featured image');
     const reportJson = await readFile(join(outputDir, 'reports', 'report.json'), 'utf8');
     expect(reportJson).toContain('"variant": "image-summary"');
     expect(reportJson).toContain('"sitemapUrls": 3');
     expect(reportJson).toContain('"limitApplied": true');
+    expect(reportJson).toContain('"code": "missing-supported-media"');
+    expect(reportJson).toContain('"stage": "media"');
   });
 });

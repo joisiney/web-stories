@@ -50,9 +50,54 @@ describe('generateStories', () => {
     expect(report.total).toBe(2);
     expect(report.succeeded).toBe(1);
     expect(report.failed).toBe(1);
+    expect(report.failures[0]?.code).toBe('missing-supported-media');
+    expect(report.failures[0]?.stage).toBe('media');
     expect(report.failures[0]?.reason).toMatch(/image or video poster/i);
     expect(await readFile(join(outDir, 'stories', 'ok', 'index.html'), 'utf8')).toContain('Post OK');
     expect(await readFile(join(outDir, 'reports', 'report.json'), 'utf8')).toContain('sem-midia');
+  });
+
+  it('classifica falha de preparação de asset sem interromper o lote', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-asset-failure-'));
+    tempDirs.push(outDir);
+
+    const report = await generateStories({
+      sitemapXml: `<?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://blog.example.com/quebra-asset/</loc></url>
+          <url><loc>https://blog.example.com/ok/</loc></url>
+        </urlset>`,
+      outputDir: outDir,
+      publicBaseUrl: 'https://stories.example.com',
+      fetchers: {
+        resolveMetadata: async (entry) => {
+          const slug = entry.loc.includes('ok') ? 'ok' : 'quebra-asset';
+          return {
+            sourceUrl: entry.loc,
+            slug,
+            title: `Post ${slug}`,
+            description: 'Primeira frase. Segunda frase.',
+            imageUrl: `https://cdn.example.com/${slug}.webp`,
+            publisher: 'Example'
+          };
+        },
+        prepareAssets: async ({ slug }) => {
+          if (slug === 'quebra-asset') {
+            throw new Error('GET https://cdn.example.com/quebra-asset.webp failed with HTTP 500');
+          }
+          return preparedAssets(slug);
+        }
+      }
+    });
+
+    expect(report.succeeded).toBe(1);
+    expect(report.failed).toBe(1);
+    expect(report.failures[0]).toMatchObject({
+      url: 'https://blog.example.com/quebra-asset/',
+      code: 'asset-failed',
+      stage: 'assets'
+    });
+    expect(report.failures[0]?.reason).toMatch(/HTTP 500/i);
   });
 
   it('processa todas as URLs do sitemap quando nenhum limite é informado', async () => {

@@ -1,13 +1,10 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { renderAmpStoryHtml } from './amp.js';
-import { AssetPreparer, type PreparedAssets, type PrepareAssetInput } from './media.js';
-import { PostMetadataResolver, type PostMetadata } from './metadata.js';
 import { DEFAULT_NETWORK_TIMEOUT_MS, fetchTextWithTimeout } from './network.js';
 import { writeGenerationOutput } from './output.js';
 import { parseSitemapXml, type SitemapEntry } from './sitemap.js';
-import { composeStory, resolveStoryMedia } from './story.js';
-import type { GeneratedStory, GenerationFailure, GenerationReport, StoryMedia } from './types.js';
+import { failureFromStoryError, generateOneStory, type StoryGeneratorFetchers } from './story-generator.js';
+import type { GeneratedStory, GenerationFailure, GenerationReport } from './types.js';
 
 export interface GenerateStoriesOptions {
   sitemapUrl?: string;
@@ -19,15 +16,7 @@ export interface GenerateStoriesOptions {
   networkTimeoutMs?: number;
   publisher?: string;
   publisherLogoUrl?: string;
-  fetchers?: GenerateStoriesFetchers;
-}
-
-interface GenerateStoriesFetchers {
-  resolveMetadata?: (entry: SitemapEntry) => Promise<PostMetadata>;
-  prepareAssets?: (input: PrepareAssetInput) => Promise<PreparedAssets>;
-  fetchText?: (url: string) => Promise<string>;
-  fetchJson?: (url: string) => Promise<unknown>;
-  fetchBinary?: (url: string) => Promise<Buffer>;
+  fetchers?: StoryGeneratorFetchers;
 }
 
 export async function generateStories(options: GenerateStoriesOptions): Promise<GenerationReport> {
@@ -43,9 +32,9 @@ export async function generateStories(options: GenerateStoriesOptions): Promise<
 
   await runWithConcurrency(entries, options.concurrency ?? 6, async (entry) => {
     try {
-      stories.push(await generateOneStory(outputDir, entry, options));
+      stories.push(await generateOneStory(entry, { ...options, outputDir }));
     } catch (error) {
-      failures.push({ url: entry.loc, reason: error instanceof Error ? error.message : String(error) });
+      failures.push(failureFromStoryError(entry.loc, error));
     }
   });
 
@@ -67,35 +56,6 @@ export async function generateStories(options: GenerateStoriesOptions): Promise<
   });
 }
 
-async function generateOneStory(outputDir: string, entry: SitemapEntry, options: GenerateStoriesOptions): Promise<GeneratedStory> {
-  const metadata = await resolveMetadata(entry, options);
-  const media = resolveStoryMedia(metadata);
-  const posterSource = metadata.imageUrl ?? metadata.videoPosterUrl;
-  if (!posterSource || media.media.length === 0) {
-    throw new Error('Missing supported image or video poster for source URL');
-  }
-
-  const preparedAssets = await prepareAssets(outputDir, options, metadata, posterSource);
-  const localMedia = usePreparedAssets(media.media, preparedAssets);
-  const story = composeStory({
-    sourceUrl: metadata.sourceUrl,
-    slug: metadata.slug,
-    title: metadata.title,
-    description: metadata.description,
-    publisher: metadata.publisher,
-    logoSrc: preparedAssets.logoSrc,
-    posterPortraitSrc: preparedAssets.posterPortraitSrc,
-    publicBaseUrl: options.publicBaseUrl,
-    media: localMedia,
-    modifiedAt: metadata.modifiedAt
-  });
-
-  const outputPath = join(outputDir, 'stories', story.slug, 'index.html');
-  await mkdir(join(outputDir, 'stories', story.slug), { recursive: true });
-  await writeFile(outputPath, renderAmpStoryHtml(story), 'utf8');
-  return { sourceUrl: story.sourceUrl, storyUrl: story.canonicalUrl, outputPath, title: story.title, variant: story.variant, warnings: media.warnings };
-}
-
 async function cleanGeneratedOutput(outputDir: string): Promise<void> {
   await Promise.all([
     rm(join(outputDir, 'stories'), { recursive: true, force: true }),
@@ -107,44 +67,9 @@ async function cleanGeneratedOutput(outputDir: string): Promise<void> {
   ]);
 }
 
-function usePreparedAssets(media: StoryMedia[], assets: PreparedAssets): StoryMedia[] {
-  return media.map((item) => {
-    if (item.kind === 'image') {
-      return { ...item, src: assets.storyImageSrc };
-    }
-    return { ...item, posterSrc: assets.posterPortraitSrc };
-  });
-}
-
 async function readEntries(options: GenerateStoriesOptions): Promise<SitemapEntry[]> {
   const sitemapXml = options.sitemapXml ?? await readRequiredSitemap(options.sitemapUrl, options.fetchers?.fetchText, options.networkTimeoutMs);
   return parseSitemapXml(sitemapXml);
-}
-
-async function resolveMetadata(entry: SitemapEntry, options: GenerateStoriesOptions): Promise<PostMetadata> {
-  if (options.fetchers?.resolveMetadata) {
-    return options.fetchers.resolveMetadata(entry);
-  }
-  return new PostMetadataResolver({
-    fetchJson: options.fetchers?.fetchJson,
-    fetchText: options.fetchers?.fetchText,
-    networkTimeoutMs: options.networkTimeoutMs,
-    publisher: options.publisher,
-    publisherLogoUrl: options.publisherLogoUrl
-  }).resolve(entry);
-}
-
-async function prepareAssets(outputDir: string, options: GenerateStoriesOptions, metadata: PostMetadata, imageUrl: string): Promise<PreparedAssets> {
-  const input = { slug: metadata.slug, imageUrl, publisher: metadata.publisher, publisherLogoUrl: metadata.publisherLogoUrl };
-  if (options.fetchers?.prepareAssets) {
-    return options.fetchers.prepareAssets(input);
-  }
-  return new AssetPreparer({
-    outputDir,
-    publicBaseUrl: options.publicBaseUrl,
-    fetchBinary: options.fetchers?.fetchBinary,
-    networkTimeoutMs: options.networkTimeoutMs
-  }).prepare(input);
 }
 
 async function readRequiredSitemap(

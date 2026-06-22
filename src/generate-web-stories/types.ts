@@ -1,4 +1,4 @@
-export type StoryVariant = 'image-summary' | 'video-first' | 'mixed-media' | 'gallery' | 'fallback-summary';
+export type StoryVariant = 'image-summary' | 'video-first' | 'mixed-media' | 'fallback-summary';
 
 export type StoryMotionIntent = 'cover' | 'context' | 'cta' | 'video';
 
@@ -45,6 +45,8 @@ export interface GeneratedStory {
 
 export interface GenerationFailure {
   url: string;
+  code: 'missing-supported-media' | 'metadata-failed' | 'asset-failed' | 'render-failed' | 'unknown';
+  stage: 'metadata' | 'media' | 'assets' | 'render';
   reason: string;
 }
 

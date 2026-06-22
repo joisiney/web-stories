@@ -154,8 +154,8 @@ Sitemap: ${publicBaseUrl.replace(/\/+$/, '')}/sitemap.xml
 }
 
 function renderFailuresCsv(failures: GenerationFailure[]): string {
-  const rows = failures.map((failure) => `${csv(failure.url)},${csv(failure.reason)}`);
-  return ['url,reason', ...rows].join('\n') + '\n';
+  const rows = failures.map((failure) => `${csv(failure.url)},${csv(failure.code)},${csv(failure.stage)},${csv(failure.reason)}`);
+  return ['url,code,stage,reason', ...rows].join('\n') + '\n';
 }
 
 function csv(value: string): string {
