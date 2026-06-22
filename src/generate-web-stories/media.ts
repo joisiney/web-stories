@@ -9,6 +9,7 @@ export interface PreparedAssets {
   logoSrc: string;
   posterPortraitSrc: string;
   storyImageSrc: string;
+  videoPosterSrc?: string;
   storyImageSrcs?: string[];
   warnings?: StoryQualityIssue[];
 }
@@ -17,6 +18,7 @@ export interface PrepareAssetInput {
   slug: string;
   imageUrl: string;
   imageUrls?: string[];
+  videoPosterUrl?: string;
   publisher: string;
   publisherLogoUrl?: string;
 }
@@ -65,10 +67,12 @@ export class AssetPreparer {
 
     const primaryStoryImageSrc = toPublicUrl(this.options.publicBaseUrl, storyImageRelativePath);
     const secondary = await this.writeSecondaryImages(safeSlug, imageUrls.slice(1), primaryStoryImageSrc);
+    const videoPosterSrc = input.videoPosterUrl ? await this.writeVideoPoster(safeSlug, input.videoPosterUrl) : undefined;
 
     return {
       posterPortraitSrc: toPublicUrl(this.options.publicBaseUrl, posterRelativePath),
       storyImageSrc: primaryStoryImageSrc,
+      videoPosterSrc,
       storyImageSrcs: [primaryStoryImageSrc, ...secondary.srcs],
       warnings: secondary.warnings,
       logoSrc: await this.ensureLogo(input.publisher, input.publisherLogoUrl)
@@ -98,6 +102,15 @@ export class AssetPreparer {
     }
 
     return { srcs, warnings };
+  }
+
+  private async writeVideoPoster(safeSlug: string, videoPosterUrl: string): Promise<string> {
+    const relativePath = `assets/${safeSlug}/video-poster.jpg`;
+    await sharp(await this.fetchBinary(videoPosterUrl))
+      .resize(POSTER_WIDTH, POSTER_HEIGHT, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+      .toFile(join(this.options.outputDir, relativePath));
+    return toPublicUrl(this.options.publicBaseUrl, relativePath);
   }
 
   private ensureLogo(publisher: string, publisherLogoUrl?: string): Promise<string> {

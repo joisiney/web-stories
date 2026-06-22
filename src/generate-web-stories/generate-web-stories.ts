@@ -1,10 +1,12 @@
 import { mkdir, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { DEFAULT_NETWORK_TIMEOUT_MS, fetchTextWithTimeout } from './network.js';
 import { writeGenerationOutput } from './output.js';
 import { parseSitemapXml, type SitemapEntry } from './sitemap.js';
 import { filterEntriesByUrlPattern } from './source-filter.js';
 import { failureFromStoryError, generateOneStory, type StoryGeneratorFetchers } from './story-generator.js';
+import { slugFromUrl } from './text.js';
 import type { GeneratedStory, GenerationFailure, GenerationReport } from './types.js';
 
 export interface GenerateStoriesOptions {
@@ -27,6 +29,7 @@ export async function generateStories(options: GenerateStoriesOptions): Promise<
   const allEntries = await readEntries(options);
   const filtered = filterEntriesByUrlPattern(allEntries, options.includeUrlPattern);
   const entries = applyLimit(filtered.entries, options.limit);
+  const outputSlugs = resolveOutputSlugs(entries);
   const stories: GeneratedStory[] = [];
   const failures: GenerationFailure[] = [];
 
@@ -35,7 +38,7 @@ export async function generateStories(options: GenerateStoriesOptions): Promise<
 
   await runWithConcurrency(entries, options.concurrency ?? 6, async (entry) => {
     try {
-      stories.push(await generateOneStory(entry, { ...options, outputDir }));
+      stories.push(await generateOneStory(entry, { ...options, outputDir, outputSlug: outputSlugs.get(entry) }));
     } catch (error) {
       failures.push(failureFromStoryError(entry.loc, error));
     }
@@ -91,6 +94,30 @@ async function readRequiredSitemap(
 
 function applyLimit(entries: SitemapEntry[], limit: number | undefined): SitemapEntry[] {
   return limit === undefined ? entries : entries.slice(0, limit);
+}
+
+function resolveOutputSlugs(entries: SitemapEntry[]): Map<SitemapEntry, string> {
+  const bySlug = new Map<string, SitemapEntry[]>();
+  for (const entry of entries) {
+    const slug = slugFromUrl(entry.loc);
+    bySlug.set(slug, [...(bySlug.get(slug) ?? []), entry]);
+  }
+
+  const outputSlugs = new Map<SitemapEntry, string>();
+  for (const [slug, group] of bySlug) {
+    const distinctUrls = new Set(group.map((entry) => entry.loc));
+    if (distinctUrls.size < 2) {
+      continue;
+    }
+    for (const entry of group) {
+      outputSlugs.set(entry, `${slug}-${hashUrl(entry.loc)}`);
+    }
+  }
+  return outputSlugs;
+}
+
+function hashUrl(url: string): string {
+  return createHash('sha1').update(url).digest('hex').slice(0, 8);
 }
 
 async function runWithConcurrency<T>(items: T[], concurrency: number, worker: (item: T) => Promise<void>): Promise<void> {

@@ -11,11 +11,12 @@ afterEach(async () => {
 });
 
 describe('generateStories', () => {
-  function preparedAssets(slug: string): { logoSrc: string; posterPortraitSrc: string; storyImageSrc: string } {
+  function preparedAssets(slug: string): { logoSrc: string; posterPortraitSrc: string; storyImageSrc: string; videoPosterSrc: string } {
     return {
       logoSrc: `https://stories.example.com/assets/${slug}/logo.png`,
       posterPortraitSrc: `https://stories.example.com/assets/${slug}/poster.jpg`,
-      storyImageSrc: `https://stories.example.com/assets/${slug}/story-image.jpg`
+      storyImageSrc: `https://stories.example.com/assets/${slug}/story-image.jpg`,
+      videoPosterSrc: `https://stories.example.com/assets/${slug}/video-poster.jpg`
     };
   }
 
@@ -377,5 +378,67 @@ describe('generateStories', () => {
     const html = await readFile(join(outDir, 'stories', 'post-local', 'index.html'), 'utf8');
     expect(html).toContain('https://stories.example.com/assets/post-local/story-image.jpg');
     expect(html).not.toContain('https://cdn.example.com/original.webp');
+  });
+
+  it('mantém saídas distintas quando URLs diferentes geram o mesmo slug base', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-slug-collision-'));
+    tempDirs.push(outDir);
+
+    const report = await generateStories({
+      sitemapXml: `<?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://blog.example.com/a/post-repetido/</loc></url>
+          <url><loc>https://blog.example.com/b/post-repetido/</loc></url>
+        </urlset>`,
+      outputDir: outDir,
+      publicBaseUrl: 'https://stories.example.com',
+      fetchers: {
+        resolveMetadata: async (entry) => ({
+          sourceUrl: entry.loc,
+          slug: 'post-repetido',
+          title: entry.loc.includes('/a/') ? 'Post A' : 'Post B',
+          description: 'Primeira frase. Segunda frase.',
+          imageUrl: `https://cdn.example.com/${entry.loc.includes('/a/') ? 'a' : 'b'}.webp`,
+          publisher: 'Example'
+        }),
+        prepareAssets: async ({ slug }) => preparedAssets(slug)
+      }
+    });
+
+    expect(report.succeeded).toBe(2);
+    expect(new Set(report.stories.map((story) => story.storyUrl)).size).toBe(2);
+    expect(new Set(report.stories.map((story) => story.outputPath)).size).toBe(2);
+    expect(report.stories.every((story) => /post-repetido-[a-f0-9]{8}\/$/.test(story.storyUrl))).toBe(true);
+    expect((await readdir(join(outDir, 'stories'))).sort()).toHaveLength(2);
+    expect(report.stories.map((story) => story.title).sort()).toEqual(['Post A', 'Post B']);
+  });
+
+  it('usa poster local específico do vídeo quando a story mistura imagem e vídeo', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'stories-mixed-video-poster-'));
+    tempDirs.push(outDir);
+
+    await generateStories({
+      sitemapXml: '<urlset><url><loc>https://blog.example.com/misto/</loc></url></urlset>',
+      outputDir: outDir,
+      publicBaseUrl: 'https://stories.example.com',
+      fetchers: {
+        resolveMetadata: async () => ({
+          sourceUrl: 'https://blog.example.com/misto/',
+          slug: 'misto',
+          title: 'Post misto',
+          description: 'Primeira frase. Segunda frase.',
+          imageUrl: 'https://cdn.example.com/hero.webp',
+          videoUrl: 'https://cdn.example.com/video.mp4',
+          videoPosterUrl: 'https://cdn.example.com/video-poster.webp',
+          publisher: 'Example'
+        }),
+        prepareAssets: async () => preparedAssets('misto')
+      }
+    });
+
+    const html = await readFile(join(outDir, 'stories', 'misto', 'index.html'), 'utf8');
+    expect(html).toContain('<amp-video id="video-media" autoplay');
+    expect(html).toContain('poster="https://stories.example.com/assets/misto/video-poster.jpg"');
+    expect(html).not.toContain('<amp-video id="video-media" autoplay layout="fill" poster="https://stories.example.com/assets/misto/poster.jpg"');
   });
 });

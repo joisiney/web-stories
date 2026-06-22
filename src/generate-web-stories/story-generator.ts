@@ -18,6 +18,7 @@ export interface StoryGeneratorFetchers {
 export interface GenerateOneStoryOptions {
   outputDir: string;
   publicBaseUrl: string;
+  outputSlug?: string;
   networkTimeoutMs?: number;
   publisher?: string;
   publisherLogoUrl?: string;
@@ -26,22 +27,23 @@ export interface GenerateOneStoryOptions {
 
 export async function generateOneStory(entry: SitemapEntry, options: GenerateOneStoryOptions): Promise<GeneratedStory> {
   const metadata = await readMetadata(entry, options);
+  const outputMetadata = options.outputSlug ? { ...metadata, slug: options.outputSlug } : metadata;
   const media = readMedia(metadata);
-  const preparedAssets = await readAssets(options, metadata, metadata.imageUrl ?? metadata.videoPosterUrl ?? '');
+  const preparedAssets = await readAssets(options, outputMetadata, metadata.imageUrl ?? metadata.videoPosterUrl ?? '');
   const localMedia = usePreparedAssets(media.media, preparedAssets);
 
   try {
     const story = composeStory({
-      sourceUrl: metadata.sourceUrl,
-      slug: metadata.slug,
-      title: metadata.title,
-      description: metadata.description,
-      publisher: metadata.publisher,
+      sourceUrl: outputMetadata.sourceUrl,
+      slug: outputMetadata.slug,
+      title: outputMetadata.title,
+      description: outputMetadata.description,
+      publisher: outputMetadata.publisher,
       logoSrc: preparedAssets.logoSrc,
       posterPortraitSrc: preparedAssets.posterPortraitSrc,
       publicBaseUrl: options.publicBaseUrl,
       media: localMedia,
-      modifiedAt: metadata.modifiedAt
+      modifiedAt: outputMetadata.modifiedAt
     });
 
     const outputPath = join(options.outputDir, 'stories', story.slug, 'index.html');
@@ -97,7 +99,14 @@ function readMedia(metadata: PostMetadata): ReturnType<typeof resolveStoryMedia>
 
 async function readAssets(options: GenerateOneStoryOptions, metadata: PostMetadata, imageUrl: string): Promise<PreparedAssets> {
   try {
-    const input = { slug: metadata.slug, imageUrl, imageUrls: metadata.imageUrls ?? [], publisher: metadata.publisher, publisherLogoUrl: metadata.publisherLogoUrl };
+    const input = {
+      slug: metadata.slug,
+      imageUrl,
+      imageUrls: metadata.imageUrls ?? [],
+      videoPosterUrl: metadata.videoPosterUrl,
+      publisher: metadata.publisher,
+      publisherLogoUrl: metadata.publisherLogoUrl
+    };
     if (options.fetchers?.prepareAssets) {
       return await options.fetchers.prepareAssets(input);
     }
@@ -121,7 +130,7 @@ function usePreparedAssets(media: StoryMedia[], assets: PreparedAssets): StoryMe
       imageIndex += 1;
       return { ...item, src };
     }
-    return { ...item, posterSrc: assets.posterPortraitSrc };
+    return { ...item, posterSrc: assets.videoPosterSrc ?? assets.posterPortraitSrc };
   });
 }
 

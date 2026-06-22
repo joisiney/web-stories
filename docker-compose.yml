@@ -7,7 +7,7 @@ services:
       SITEMAP_URL: ${SITEMAP_URL:-https://blog.jota.ai/post-sitemap.xml}
       OUTPUT_DIR: public
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-      LIMIT: ${LIMIT-20}
+      LIMIT: ${LIMIT:-}
       INCLUDE_URL_PATTERN: ${INCLUDE_URL_PATTERN:-}
       CONCURRENCY: ${CONCURRENCY:-6}
       NETWORK_TIMEOUT_MS: ${NETWORK_TIMEOUT_MS:-30000}

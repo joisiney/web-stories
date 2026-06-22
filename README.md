@@ -64,12 +64,18 @@ pnpm generate --sitemap https://blog.jota.ai/post-sitemap.xml --out public --bas
 docker compose up --build
 ```
 
+Por padrão, o Docker processa todas as URLs do sitemap. Para smoke test rápido, defina `LIMIT` explicitamente:
+
+```bash
+LIMIT=20 docker compose up --build
+```
+
 Variáveis suportadas:
 
 ```bash
 SITEMAP_URL=https://blog.jota.ai/post-sitemap.xml
 PUBLIC_BASE_URL=http://localhost:8080
-LIMIT=20
+LIMIT=
 INCLUDE_URL_PATTERN=
 CONCURRENCY=6
 NETWORK_TIMEOUT_MS=30000
@@ -107,6 +113,7 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
 - `public/assets/<slug>/poster-portrait.jpg`: poster 3:4.
 - `public/assets/<slug>/story-image.jpg`: imagem vertical 9:16.
 - `public/assets/<slug>/story-image-2.jpg`, `story-image-3.jpg` etc.: imagens secundárias 9:16 quando disponíveis.
+- `public/assets/<slug>/video-poster.jpg`: poster local 3:4 para vídeo direto quando disponível.
 - `public/assets/shared/publisher-logo.png`: logo raster 1:1.
 - `public/index.html`: galeria operacional com métricas, cards e links técnicos.
 - `public/sitemap.xml`: sitemap XML das Web Stories com stylesheet XSL.
@@ -119,6 +126,9 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
 
 ```json
 {
+  "startedAt": "2026-06-22T17:41:20.345Z",
+  "finishedAt": "2026-06-22T17:41:31.070Z",
+  "durationMs": 10725,
   "sitemapUrls": 3,
   "processed": 2,
   "limit": 2,
@@ -128,10 +138,12 @@ Essa divisão mantém interfaces pequenas e implementação localizada: funçõe
   "total": 2,
   "succeeded": 2,
   "failed": 0,
+  "outputDir": "/absolute/path/to/public",
   "stories": [
     {
       "sourceUrl": "https://blog.example.com/post/",
       "storyUrl": "http://localhost:8080/stories/post/",
+      "outputPath": "/absolute/path/to/public/stories/post/index.html",
       "title": "Título",
       "posterPortraitSrc": "http://localhost:8080/assets/post/poster-portrait.jpg",
       "modifiedAt": "2026-06-22T05:09:25-03:00",
@@ -163,6 +175,7 @@ Códigos de falha por item:
 - TypeScript/Node com `strict` habilitado.
 - Vertical slice única para manter regras, IO e testes próximos.
 - Geração determinística: o runtime não depende de prompt, LLM ou credenciais.
+- Uso de IA, quando houver no desenvolvimento, deve ser tratado como assistência revisada por humano; a rastreabilidade técnica fica nos testes, gates e documentação, e nenhuma chamada a LLM ocorre em runtime.
 - Retry/backoff fica na fronteira de rede, sem contaminar renderers ou resolvers.
 - Testes validam comportamento público observável, não ordem interna de chamadas.
 - Sitemap inválido aborta a execução; falhas de posts individuais entram no relatório.

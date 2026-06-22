@@ -80,4 +80,27 @@ describe('AssetPreparer', () => {
     expect(await stat(join(outputDir, 'assets', 'post-a', 'story-image.jpg'))).toBeTruthy();
     expect(await stat(join(outputDir, 'assets', 'post-a', 'story-image-3.jpg'))).toBeTruthy();
   });
+
+  it('rasteriza poster de vídeo direto quando videoPosterUrl é informado', async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), 'assets-video-poster-'));
+    tempDirs.push(outputDir);
+    const hero = await sharp({ create: { width: 1200, height: 1600, channels: 3, background: '#203040' } }).webp().toBuffer();
+    const videoPoster = await sharp({ create: { width: 1280, height: 720, channels: 3, background: '#e5c76f' } }).webp().toBuffer();
+
+    const assets = await new AssetPreparer({
+      outputDir,
+      publicBaseUrl: 'https://stories.example.com',
+      fetchBinary: async (url) => (url.includes('video-poster') ? videoPoster : hero)
+    }).prepare({
+      slug: 'post-video',
+      imageUrl: 'https://cdn.example.com/hero.webp',
+      videoPosterUrl: 'https://cdn.example.com/video-poster.webp',
+      publisher: 'Example'
+    } as Parameters<AssetPreparer['prepare']>[0] & { videoPosterUrl: string });
+
+    expect(assets.videoPosterSrc).toBe('https://stories.example.com/assets/post-video/video-poster.jpg');
+    expect(await stat(join(outputDir, 'assets', 'post-video', 'video-poster.jpg'))).toBeTruthy();
+    const poster = await sharp(await readFile(join(outputDir, 'assets', 'post-video', 'video-poster.jpg'))).metadata();
+    expect([poster.width, poster.height]).toEqual([640, 853]);
+  });
 });

@@ -17,7 +17,6 @@ ENV NODE_ENV=production \
     SITEMAP_URL=https://blog.jota.ai/post-sitemap.xml \
     OUTPUT_DIR=public \
     PUBLIC_BASE_URL=http://localhost:8080 \
-    LIMIT=20 \
     INCLUDE_URL_PATTERN= \
     CONCURRENCY=6 \
     NETWORK_TIMEOUT_MS=30000 \
