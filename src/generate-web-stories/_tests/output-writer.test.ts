@@ -50,6 +50,7 @@ describe('writeGenerationOutput', () => {
     expect(indexHtml).toContain('2 processadas de 3 URLs lidas');
     expect(indexHtml).toContain('1 sucesso');
     expect(indexHtml).toContain('1 falha');
+    expect(indexHtml).toContain('<link rel="icon" href="/assets/shared/publisher-logo.png">');
     expect(indexHtml).toContain('story-card');
     expect(indexHtml).toContain('https://stories.example.com/assets/ok/poster.jpg');
     expect(indexHtml).toContain('unsupported-video');
@@ -65,6 +66,7 @@ describe('writeGenerationOutput', () => {
     expect(sitemapXml).toContain('<lastmod>2026-06-20T00:00:00.000Z</lastmod>');
     const sitemapXsl = await readFile(join(outputDir, 'sitemap.xsl'), 'utf8');
     expect(sitemapXsl).toContain('Web Stories Sitemap');
+    expect(sitemapXsl).toContain('<link rel="icon" href="/assets/shared/publisher-logo.png"/>');
     expect(sitemapXsl).toContain('Sitemap URLs');
     expect(await readFile(join(outputDir, 'robots.txt'), 'utf8')).toContain('Sitemap: https://stories.example.com/sitemap.xml');
     const failuresCsv = await readFile(join(outputDir, 'reports', 'failures.csv'), 'utf8');

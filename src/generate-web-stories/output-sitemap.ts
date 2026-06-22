@@ -21,6 +21,7 @@ export function renderSitemapXsl(): string {
       <head>
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width,initial-scale=1"/>
+        <link rel="icon" href="/assets/shared/publisher-logo.png"/>
         <title>Web Stories Sitemap</title>
         <style>
           :root{--surface:#f5fbf7;--paper:#ffffff;--ink:#17211b;--muted:#68756d;--line:#dce8df;--accent:#00e676;--accent-dark:#08783d;--radius:8px}

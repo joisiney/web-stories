@@ -9,6 +9,7 @@ export function renderIndexHtml(report: GenerationReport): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="/assets/shared/publisher-logo.png">
   <title>Web Stories geradas</title>
   <style>${indexCss()}</style>
 </head>
